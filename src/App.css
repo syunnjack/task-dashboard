@@ -1,0 +1,94 @@
+.app {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  text-align: left;
+}
+
+.task-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.task-form input {
+  flex: 1;
+  font: inherit;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.task-form button {
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  color: #fff;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.empty {
+  color: var(--text);
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.task label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.task label span {
+  overflow-wrap: anywhere;
+}
+
+.task.done {
+  color: var(--text);
+  background: var(--code-bg);
+}
+
+.task.done span {
+  text-decoration: line-through;
+}
+
+.delete-button {
+  font: inherit;
+  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.delete-button:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
