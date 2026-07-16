@@ -4,7 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>タスクダッシュボード</title>
+    <meta
+      name="description"
+      content="この子だれ？は、作品名・品番・メーカー・公開クレジットから出演女優の名前を探せる検索サイトです。"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "この子だれ？",
+        "url": "https://darekore.jp/",
+        "description": "作品名・品番・メーカー・公開クレジットから出演女優の名前を探せる検索サイトです。",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://darekore.jp/?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+    <title>この子だれ？</title>
   </head>
   <body>
     <div id="root"></div>
