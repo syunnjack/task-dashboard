@@ -1,16 +1,20 @@
-# React + Vite
+# task-dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite で作成したタスクダッシュボードです。
 
-Currently, two official plugins are available:
+## Deploy
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+このリポジトリは GitHub Pages での公開を前提にしています。
 
-## React Compiler
+- Production domain: `darekore.jp`
+- Build command: `npm run build`
+- Build output directory: `dist`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+`main` ブランチへ反映されると、GitHub Actions が自動でビルドして GitHub Pages へデプロイします。
 
-## Expanding the Oxlint configuration
+## Commands
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+- `npm run dev`: 開発サーバー起動
+- `npm run build`: 本番ビルド
+- `npm run lint`: 静的解析
+- `npm run preview`: ビルド結果のプレビュー
