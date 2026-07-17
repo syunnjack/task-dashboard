@@ -7,6 +7,7 @@ const CONTENT_KEY = 'task-dashboard.rakutenContent'
 const AUTOPILOT_KEY = 'task-dashboard.rakutenAutopilot'
 const ROOM_FLOWS_KEY = 'task-dashboard.roomFlows'
 const AFFILIATE_SETTINGS_KEY = 'task-dashboard.rakutenAffiliateSettings'
+const USER_RAKUTEN_AFFILIATE_LINK = 'https://hb.afl.rakuten.co.jp/hsc/55d66bbd.abc43fa6.152c70c7.a660e6e7/?link_type=text&ut=eyJwYWdlIjoic2hvcCIsInR5cGUiOiJ0ZXh0IiwiY29sIjoxLCJjYXQiOjEsImJhbiI6MTkwMTUsImFtcCI6ZmFsc2V9'
 
 const defaultReports = [
   { id: 'sample-1', date: '2026-07-15', clicks: 42, orders: 2, sales: 8600, reward: 172, memo: 'レビュー記事から初成果。商品ボタンを上部にも追加。' },
@@ -92,9 +93,9 @@ const emptyRoomFlow = {
 }
 
 const defaultAffiliateSettings = {
-  affiliateLink: '',
-  campaignName: '楽天ROOM導線',
-  targetMemo: '成果が出ている記事、SNS投稿、ROOM投稿にこのリンクを優先して配置',
+  affiliateLink: USER_RAKUTEN_AFFILIATE_LINK,
+  campaignName: '楽天市場テキストリンク',
+  targetMemo: '日本最大級ショッピングサイト！お買い物なら楽天市場',
 }
 
 function readStorage(key, fallback) {
@@ -237,6 +238,12 @@ function App() {
   useEffect(() => {
     localStorage.setItem(AFFILIATE_SETTINGS_KEY, JSON.stringify(affiliateSettings))
   }, [affiliateSettings])
+
+  useEffect(() => {
+    if (affiliateSettings.affiliateLink.trim()) return
+    setAffiliateSettings(defaultAffiliateSettings)
+    setAffiliateForm(defaultAffiliateSettings)
+  }, [affiliateSettings.affiliateLink])
 
   useEffect(() => {
     localStorage.setItem(AUTOPILOT_KEY, JSON.stringify(autopilot))
