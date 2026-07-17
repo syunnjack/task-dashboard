@@ -1,16 +1,21 @@
-# task-dashboard
+# route-spot-navi
 
-React + Vite で作成したタスクダッシュボードです。
+Route Spot Naviは、乗換・高速バスの到着地から「次に行く場所」まで探せる地域情報ナビのプロトタイプです。
 
-## Deploy
+## Concept
 
-このリポジトリは GitHub Pages での公開を前提にしています。
+- 経路検索の到着地から、周辺スポット、宿、喫煙場所、カフェ、ゲーム施設などへ誘導する
+- 待ち時間、徒歩分数、料金、評価、ユーザー投票で比較できる
+- 掲載候補をメモし、カテゴリ別の検索条件に反映できる
+- 将来的に地図、口コミ、閉店情報、ランキング、API連携へ拡張する
 
-- Production domain: `darekore.jp`
+## Production
+
+- Domain: `routespot.jp`
 - Build command: `npm run build`
-- Build output directory: `dist`
+- Build output: `dist`
 
-`main` ブランチへ反映されると、GitHub Actions が自動でビルドして GitHub Pages へデプロイします。
+GitHub Pagesで公開する場合は、`public/CNAME` に `routespot.jp` を設定済みです。
 
 ## Commands
 

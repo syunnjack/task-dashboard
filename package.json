@@ -1,11 +1,10 @@
 {
-  "name": "task-dashboard",
+  "name": "route-spot-navi",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/fetch-fanza-data.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
