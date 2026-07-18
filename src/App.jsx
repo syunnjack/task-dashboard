@@ -1,389 +1,287 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 
-const favoritesKey = 'task-dashboard.routeSpotFavorites'
-const votesKey = 'task-dashboard.routeSpotVotes'
+const favoriteKey = 'task-dashboard.tripFavorites'
+const reviewKey = 'task-dashboard.tripReviews'
+const alertKey = 'task-dashboard.tripAlerts'
 
-const categories = ['すべて', 'ゲーム', '喫煙', 'カフェ', '宿', 'レトロ', 'スポーツ', '行政']
+const categories = ['すべて', '休憩・仮眠', 'シャワー・入浴', '荷物預かり', '電源・Wi-Fi', '早朝ごはん']
 
-const sampleSpots = [
+const spots = [
   {
-    id: 'osu-game',
-    name: '大須レトロゲーム横丁',
-    area: '名古屋',
-    station: '上前津',
-    category: 'ゲーム',
-    minutes: 4,
-    price: 700,
+    id: 'nagoya-spa',
+    city: '名古屋',
+    station: '名古屋駅',
+    category: 'シャワー・入浴',
+    name: '駅西リフレッシュスパ',
+    summary: '夜行バス到着後に使いやすい、シャワーと身支度スペースのある休憩施設。',
+    walk: 6,
+    price: 980,
+    hours: '6:00〜翌1:00',
+    openHour: 6,
     rating: 4.4,
-    votes: 128,
-    wait: 18,
-    open: '12:00-23:00',
-    features: ['遠征向け', '近くに飲食店', '雨でも歩きやすい'],
-    note: 'レトロゲーセン、コンカフェ、漫画喫茶をまとめて回れるモデルケース。',
+    reviews: 126,
+    verified: '2026-07-12',
+    tags: ['女性専用エリア', 'ヘアアイロン', '大型荷物'],
+    tone: 'coral',
   },
   {
-    id: 'meieki-smoke',
-    name: '名駅スマート喫煙スポット',
-    area: '名古屋',
-    station: '名古屋',
-    category: '喫煙',
-    minutes: 2,
-    price: 0,
-    rating: 4.1,
-    votes: 84,
-    wait: 6,
-    open: '07:00-22:00',
-    features: ['駅近', '屋内', 'QR案内'],
-    note: '猫の目コム風に、混雑と最短導線を見せる想定。',
-  },
-  {
-    id: 'shizuoka-hotel',
-    name: '静岡駅前バストイレ別ホテル',
-    area: '静岡',
-    station: '静岡',
-    category: '宿',
-    minutes: 7,
-    price: 6800,
-    rating: 4.2,
-    votes: 62,
-    wait: 0,
-    open: 'チェックイン 15:00',
-    features: ['喫煙可', 'バストイレ付', '高速バス連携'],
-    note: '高速バス検索の到着地から宿へ誘導する比較枠。',
-  },
-  {
-    id: 'sakae-cafe',
-    name: '栄 待ち時間ニュースカフェ',
-    area: '名古屋',
-    station: '栄',
-    category: 'カフェ',
-    minutes: 3,
-    price: 520,
-    rating: 4.0,
-    votes: 51,
-    wait: 12,
-    open: '08:00-21:00',
-    features: ['待ち時間向け', '電源', '軽食'],
-    note: 'matene風に短時間で読めるニュースやエンタメ導線を置く。',
-  },
-  {
-    id: 'kuwana-bowling',
-    name: '桑名ボウリング遠征メモ',
-    area: '三重',
-    station: '桑名',
-    category: 'スポーツ',
-    minutes: 9,
-    price: 1600,
-    rating: 4.3,
-    votes: 77,
-    wait: 24,
-    open: '10:00-24:00',
-    features: ['大会情報', 'スコア投稿', '宿リンク'],
-    note: 'ランクシーカー風に大会成績、周辺宿、日記投稿をつなぐ。',
-  },
-  {
-    id: 'nakagawa-office',
-    name: '中川区 手続き待ち時間案内',
-    area: '名古屋',
-    station: '高畑',
-    category: '行政',
-    minutes: 5,
-    price: 0,
-    rating: 3.8,
-    votes: 39,
-    wait: 42,
-    open: '08:45-17:15',
-    features: ['待ち時間', '周辺カフェ', 'QR案内'],
-    note: '民間施設にも応用できる、待ち時間から周辺行動へ誘導する枠。',
-  },
-  {
-    id: 'jihanki-route',
-    name: '懐かし自販機めぐり',
-    area: '愛知',
-    station: '岡崎',
-    category: 'レトロ',
-    minutes: 15,
-    price: 300,
+    id: 'nagoya-locker',
+    city: '名古屋',
+    station: '名古屋駅',
+    category: '荷物預かり',
+    name: '名駅スマートクローク',
+    summary: '予約できる有人クローク。コインロッカーに入らないスーツケースにも対応。',
+    walk: 3,
+    price: 700,
+    hours: '7:00〜23:00',
+    openHour: 7,
     rating: 4.6,
-    votes: 144,
-    wait: 3,
-    open: '24時間',
-    features: ['地図アンカー', '写真投稿', '閉店確認'],
-    note: '地図スクロールだけでなく、アンカーテキストで素早く探す導線。',
+    reviews: 88,
+    verified: '2026-07-16',
+    tags: ['予約可', '大型荷物', '当日利用'],
+    tone: 'blue',
+  },
+  {
+    id: 'nagoya-cafe',
+    city: '名古屋',
+    station: '名古屋駅',
+    category: '電源・Wi-Fi',
+    name: '朝活ラウンジ ミッドランド前',
+    summary: '静かな作業席と高速Wi-Fi。到着後の予定整理やオンライン会議にも。',
+    walk: 5,
+    price: 600,
+    hours: '6:30〜21:00',
+    openHour: 6.5,
+    rating: 4.2,
+    reviews: 64,
+    verified: '2026-07-10',
+    tags: ['全席電源', 'Wi-Fi実測', '女性一人利用'],
+    tone: 'green',
+  },
+  {
+    id: 'tokyo-nap',
+    city: '東京',
+    station: '新宿駅',
+    category: '休憩・仮眠',
+    name: '新宿バスタ前 ナップラウンジ',
+    summary: 'リクライニング席を時間単位で利用。早朝の休憩と充電に向いた施設。',
+    walk: 4,
+    price: 1200,
+    hours: '24時間',
+    openHour: 0,
+    rating: 4.1,
+    reviews: 214,
+    verified: '2026-07-15',
+    tags: ['24時間', '女性専用席', '充電'],
+    tone: 'purple',
+  },
+  {
+    id: 'osaka-breakfast',
+    city: '大阪',
+    station: '大阪駅',
+    category: '早朝ごはん',
+    name: 'うめきた朝ごはん食堂',
+    summary: '朝6時から温かい定食。バス到着口から屋根のあるルートで移動できる。',
+    walk: 7,
+    price: 780,
+    hours: '6:00〜14:00',
+    openHour: 6,
+    rating: 4.5,
+    reviews: 173,
+    verified: '2026-07-14',
+    tags: ['朝6時', '一人席', 'キャリー可'],
+    tone: 'yellow',
+  },
+  {
+    id: 'fukuoka-bath',
+    city: '福岡',
+    station: '博多駅',
+    category: 'シャワー・入浴',
+    name: '博多あさ風呂ステーション',
+    summary: 'タオル付きで手ぶら利用可能。駅から近く、朝の身支度に必要な設備を集約。',
+    walk: 8,
+    price: 1100,
+    hours: '5:30〜24:00',
+    openHour: 5.5,
+    rating: 4.3,
+    reviews: 97,
+    verified: '2026-07-11',
+    tags: ['タオル付き', 'メイク台', '大型荷物'],
+    tone: 'aqua',
   },
 ]
 
-const sampleRoutes = [
-  { id: 'route-1', from: '名古屋', to: '静岡', type: '高速バス', time: '2時間42分', fare: 2900, comfort: '安い', transfer: 0 },
-  { id: 'route-2', from: '名古屋', to: '静岡', type: '新幹線', time: '54分', fare: 5940, comfort: '速い', transfer: 0 },
-  { id: 'route-3', from: '栄', to: '高畑', type: '地下鉄', time: '21分', fare: 270, comfort: '駅近', transfer: 1 },
+const revenueLinks = [
+  { label: '今夜のホテルを比較', note: '空室と料金をまとめて確認', icon: '泊', href: 'https://travel.rakuten.co.jp/' },
+  { label: '高速バスを探す', note: '到着時刻から便を比較', icon: 'バ', href: 'https://travel.rakuten.co.jp/bus/' },
+  { label: '旅先の通信を準備', note: 'eSIM・Wi-Fiの候補を見る', icon: '通', href: 'https://search.rakuten.co.jp/search/mall/eSIM/' },
 ]
 
-const updates = [
-  '名古屋駅周辺の喫煙スポットを3件確認。閉鎖情報は要レビュー。',
-  '静岡駅前ホテルに「喫煙可」「バストイレ付」フィルターを追加予定。',
-  'ゲーセン閉店情報はユーザー投稿と管理者確認の2段階にする。',
-]
-
-function readStoredObject(key) {
+function readStorage(key, fallback) {
   try {
-    return JSON.parse(localStorage.getItem(key)) ?? {}
+    return JSON.parse(localStorage.getItem(key)) ?? fallback
   } catch {
-    return {}
+    return fallback
   }
-}
-
-function formatYen(value) {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-    maximumFractionDigits: 0,
-  }).format(value)
 }
 
 function App() {
-  const [query, setQuery] = useState('名古屋')
+  const [city, setCity] = useState('名古屋')
+  const [arrival, setArrival] = useState('06:30')
   const [category, setCategory] = useState('すべて')
-  const [sortBy, setSortBy] = useState('おすすめ')
-  const [favorites, setFavorites] = useState(() => readStoredObject(favoritesKey))
-  const [extraVotes, setExtraVotes] = useState(() => readStoredObject(votesKey))
-  const [routeInput, setRouteInput] = useState({ from: '名古屋', to: '静岡' })
-  const [proposal, setProposal] = useState({ name: '', area: '', category: 'ゲーム' })
+  const [query, setQuery] = useState('')
+  const [favorites, setFavorites] = useState(() => readStorage(favoriteKey, {}))
+  const [reviews, setReviews] = useState(() => readStorage(reviewKey, []))
+  const [alerts, setAlerts] = useState(() => readStorage(alertKey, []))
+  const [reviewForm, setReviewForm] = useState({ spot: '駅西リフレッシュスパ', status: '営業していた', note: '' })
+  const [alertForm, setAlertForm] = useState({ email: '', topic: '名古屋駅の新着・変更' })
+  const [message, setMessage] = useState('')
 
-  const spots = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
-    const filtered = sampleSpots.filter((spot) => {
-      const matchesCategory = category === 'すべて' || spot.category === category
-      const haystack = `${spot.name} ${spot.area} ${spot.station} ${spot.features.join(' ')} ${spot.note}`.toLowerCase()
-      return matchesCategory && (!normalizedQuery || haystack.includes(normalizedQuery))
-    })
+  const results = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    return spots
+      .filter((spot) => spot.city === city)
+      .filter((spot) => category === 'すべて' || spot.category === category)
+      .filter((spot) => !term || `${spot.name} ${spot.category} ${spot.tags.join(' ')}`.toLowerCase().includes(term))
+      .sort((a, b) => a.walk - b.walk)
+  }, [category, city, query])
 
-    return filtered.sort((a, b) => {
-      if (sortBy === '近い順') return a.minutes - b.minutes
-      if (sortBy === '安い順') return a.price - b.price
-      if (sortBy === '待ち時間短い順') return a.wait - b.wait
-      return b.rating + (extraVotes[b.id] ?? 0) * 0.02 - (a.rating + (extraVotes[a.id] ?? 0) * 0.02)
-    })
-  }, [category, extraVotes, query, sortBy])
-
-  const routeResults = useMemo(
-    () =>
-      sampleRoutes.filter((route) => {
-        const fromMatch = route.from.includes(routeInput.from.trim()) || routeInput.from.trim().includes(route.from)
-        const toMatch = route.to.includes(routeInput.to.trim()) || routeInput.to.trim().includes(route.to)
-        return fromMatch && toMatch
-      }),
-    [routeInput],
-  )
-
-  const featuredSpot = spots[0] ?? sampleSpots[0]
-  const favoriteCount = Object.values(favorites).filter(Boolean).length
-  const averageWait = Math.round(spots.reduce((sum, spot) => sum + spot.wait, 0) / Math.max(spots.length, 1))
-
-  const toggleFavorite = (spotId) => {
+  const toggleFavorite = (id) => {
     setFavorites((current) => {
-      const next = { ...current, [spotId]: !current[spotId] }
-      localStorage.setItem(favoritesKey, JSON.stringify(next))
+      const next = { ...current, [id]: !current[id] }
+      localStorage.setItem(favoriteKey, JSON.stringify(next))
       return next
     })
   }
 
-  const addVote = (spotId) => {
-    setExtraVotes((current) => {
-      const next = { ...current, [spotId]: (current[spotId] ?? 0) + 1 }
-      localStorage.setItem(votesKey, JSON.stringify(next))
-      return next
-    })
-  }
-
-  const submitProposal = (event) => {
+  const submitReview = (event) => {
     event.preventDefault()
-    if (!proposal.name.trim() || !proposal.area.trim()) return
-    setQuery(proposal.area.trim())
-    setCategory(proposal.category)
-    setProposal({ name: '', area: '', category: 'ゲーム' })
+    if (!reviewForm.note.trim()) return
+    const next = [{ ...reviewForm, id: Date.now(), createdAt: new Date().toLocaleDateString('ja-JP') }, ...reviews]
+    setReviews(next)
+    localStorage.setItem(reviewKey, JSON.stringify(next))
+    setReviewForm((current) => ({ ...current, note: '' }))
+    setMessage('現地情報を受け付けました。公開前に内容を確認します。')
+  }
+
+  const submitAlert = (event) => {
+    event.preventDefault()
+    if (!alertForm.email.includes('@')) return
+    const next = [...alerts, { ...alertForm, id: Date.now() }]
+    setAlerts(next)
+    localStorage.setItem(alertKey, JSON.stringify(next))
+    setAlertForm((current) => ({ ...current, email: '' }))
+    setMessage('通知条件をこの端末に保存しました。MVPではメールは送信されません。')
   }
 
   return (
-    <main className="app-shell">
-      <header className="top-bar">
-        <div>
-          <span className="app-mark">Route Spot Lab</span>
-          <h1>移動先で「次に行く場所」まで探せる比較ナビ</h1>
-        </div>
-        <nav aria-label="主要セクション">
-          <a href="#search">検索</a>
-          <a href="#routes">経路比較</a>
-          <a href="#ranking">投票</a>
+    <div className="site-shell">
+      <header className="site-header">
+        <a className="brand" href="#top" aria-label="遠征ラクナビ ホーム">
+          <span className="brand-mark">R</span>
+          <span><strong>遠征ラクナビ</strong><small>ARRIVAL SUPPORT</small></span>
+        </a>
+        <nav aria-label="メインナビゲーション">
+          <a href="#spots">施設を探す</a>
+          <a href="#voices">現地レポート</a>
+          <a href="#alerts">通知</a>
         </nav>
+        <a className="header-save" href="#saved">保存済み <b>{Object.values(favorites).filter(Boolean).length}</b></a>
       </header>
 
-      <section className="control-surface" id="search">
-        <div className="search-panel">
-          <label>
-            行き先・駅・ジャンル
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="例: 名古屋、静岡、喫煙、ゲーム" />
-          </label>
-          <label>
-            カテゴリ
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
-              {categories.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            並び替え
-            <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-              <option>おすすめ</option>
-              <option>近い順</option>
-              <option>安い順</option>
-              <option>待ち時間短い順</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="summary-strip" aria-label="検索結果サマリー">
-          <article>
-            <span>掲載候補</span>
-            <strong>{spots.length}</strong>
-          </article>
-          <article>
-            <span>平均待ち時間</span>
-            <strong>{averageWait}分</strong>
-          </article>
-          <article>
-            <span>保存済み</span>
-            <strong>{favoriteCount}</strong>
-          </article>
-        </div>
-      </section>
-
-      <section className="main-grid">
-        <div className="result-list" aria-label="スポット検索結果">
-          {spots.map((spot) => (
-            <article className="spot-card" key={spot.id}>
-              <div className="spot-visual" aria-hidden="true">
-                <span>{spot.category}</span>
-              </div>
-              <div className="spot-body">
-                <div className="spot-heading">
-                  <div>
-                    <span className="area-label">{spot.area} / {spot.station}駅</span>
-                    <h2>{spot.name}</h2>
-                  </div>
-                  <button type="button" className={favorites[spot.id] ? 'icon-button active' : 'icon-button'} onClick={() => toggleFavorite(spot.id)} aria-label={`${spot.name}を保存`}>
-                    ☆
-                  </button>
-                </div>
-                <p>{spot.note}</p>
-                <div className="spot-metrics">
-                  <span>徒歩 {spot.minutes}分</span>
-                  <span>{spot.price ? formatYen(spot.price) : '無料'}</span>
-                  <span>待ち {spot.wait}分</span>
-                  <span>評価 {(spot.rating + (extraVotes[spot.id] ?? 0) * 0.02).toFixed(1)}</span>
-                </div>
-                <div className="tag-row">
-                  {spot.features.map((feature) => (
-                    <span key={feature}>{feature}</span>
-                  ))}
-                </div>
-                <div className="card-actions">
-                  <button type="button" onClick={() => addVote(spot.id)}>投票する</button>
-                  <a href={`https://www.google.com/maps/search/${encodeURIComponent(`${spot.area} ${spot.name}`)}`} target="_blank" rel="noreferrer">
-                    地図で開く
-                  </a>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <aside className="side-rail">
-          <section className="map-panel" aria-label="周辺導線マップ">
-            <div className="route-map">
-              <span className="node start">駅</span>
-              <span className="line" />
-              <span className="node middle">待ち時間</span>
-              <span className="line" />
-              <span className="node end">{featuredSpot.category}</span>
+      <main id="top">
+        <section className="hero">
+          <div className="hero-copy">
+            <p className="eyebrow"><span>●</span> 夜行バス・ライブ遠征の到着後をスムーズに</p>
+            <h1>着いた。でも、<br/><em>次の予定までどうする？</em></h1>
+            <p className="hero-lead">到着地と時刻から、シャワー、仮眠、荷物預かり、電源スポットをまとめて比較。現地の最新レポートで「今使える」が分かります。</p>
+            <div className="trust-row">
+              <span>✓ 更新日の見える情報</span><span>✓ 現地UGC</span><span>✓ 料金・設備を比較</span>
             </div>
-            <h2>{featuredSpot.station}駅からの寄り道候補</h2>
-            <p>{featuredSpot.name} は徒歩 {featuredSpot.minutes}分。到着前に混雑、料金、周辺宿リンクをまとめて見せる想定です。</p>
-          </section>
-
-          <section className="updates-panel">
-            <h2>運営メモ</h2>
-            <ul>
-              {updates.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-        </aside>
-      </section>
-
-      <section className="route-section" id="routes">
-        <div className="section-heading">
-          <span className="app-mark">Route compare</span>
-          <h2>乗換・高速バス検索から周辺情報へつなぐ</h2>
-        </div>
-        <form className="route-form">
-          <input value={routeInput.from} onChange={(event) => setRouteInput({ ...routeInput, from: event.target.value })} aria-label="出発地" />
-          <input value={routeInput.to} onChange={(event) => setRouteInput({ ...routeInput, to: event.target.value })} aria-label="到着地" />
-        </form>
-        <div className="route-list">
-          {(routeResults.length ? routeResults : sampleRoutes).map((route) => (
-            <article key={route.id}>
-              <div>
-                <span>{route.type}</span>
-                <strong>{route.from} → {route.to}</strong>
-              </div>
-              <p>{route.time} / {formatYen(route.fare)} / 乗換 {route.transfer}回</p>
-              <small>{route.comfort}ルート。到着地の宿・カフェ・喫煙所を下に自動表示する設計。</small>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="bottom-grid" id="ranking">
-        <article className="ranking-panel">
-          <div className="section-heading">
-            <span className="app-mark">User voting</span>
-            <h2>ユーザー参加型ランキング</h2>
           </div>
-          <ol>
-            {[...sampleSpots]
-              .sort((a, b) => b.votes + (extraVotes[b.id] ?? 0) - (a.votes + (extraVotes[a.id] ?? 0)))
-              .slice(0, 5)
-              .map((spot) => (
-                <li key={spot.id}>
-                  <strong>{spot.name}</strong>
-                  <span>{spot.votes + (extraVotes[spot.id] ?? 0)}票</span>
-                </li>
-              ))}
-          </ol>
-        </article>
-
-        <article className="proposal-panel">
-          <div className="section-heading">
-            <span className="app-mark">Submit</span>
-            <h2>掲載候補をメモする</h2>
+          <div className="route-card" aria-label="到着後のモデルプラン">
+            <div className="route-card-head"><span>6:30 名古屋駅 到着</span><b>モデルプラン</b></div>
+            <ol>
+              <li><time>6:40</time><span><b>荷物を預ける</b><small>徒歩3分・予約可</small></span></li>
+              <li><time>7:00</time><span><b>シャワー＆身支度</b><small>女性専用エリアあり</small></span></li>
+              <li><time>8:20</time><span><b>電源カフェで準備</b><small>Wi-Fi実測レポートあり</small></span></li>
+            </ol>
+            <p>次の予定まで <strong>2時間50分</strong> を快適に</p>
           </div>
-          <form onSubmit={submitProposal}>
-            <input value={proposal.name} onChange={(event) => setProposal({ ...proposal, name: event.target.value })} placeholder="施設名・サイト名" />
-            <input value={proposal.area} onChange={(event) => setProposal({ ...proposal, area: event.target.value })} placeholder="地域・駅名" />
-            <select value={proposal.category} onChange={(event) => setProposal({ ...proposal, category: event.target.value })}>
-              {categories.filter((item) => item !== 'すべて').map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-            <button type="submit">検索条件へ反映</button>
+        </section>
+
+        <section className="search-dock" aria-label="施設検索">
+          <label><span>到着地</span><select value={city} onChange={(e) => setCity(e.target.value)}><option>名古屋</option><option>東京</option><option>大阪</option><option>福岡</option></select></label>
+          <label><span>到着時刻</span><input type="time" value={arrival} onChange={(e) => setArrival(e.target.value)} /></label>
+          <label className="keyword"><span>目的・設備</span><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="例：女性専用、電源、大型荷物" /></label>
+          <a className="search-button" href="#spots">この条件で探す <span>→</span></a>
+        </section>
+
+        <section className="section" id="spots">
+          <div className="section-title-row">
+            <div><p className="eyebrow">SPOT FINDER</p><h2>{city}の到着後スポット</h2><p>{arrival}到着を想定したデモ情報です。来店前に公式情報をご確認ください。</p></div>
+            <span className="result-count">{results.length}件</span>
+          </div>
+          <div className="category-tabs" role="group" aria-label="カテゴリー">
+            {categories.map((item) => <button className={item === category ? 'active' : ''} type="button" key={item} onClick={() => setCategory(item)}>{item}</button>)}
+          </div>
+          <div className="spot-grid">
+            {results.map((spot) => (
+              <article className="spot-card" key={spot.id}>
+                <div className={`spot-visual ${spot.tone}`}><span>{spot.category}</span><b>{spot.station}<br/>徒歩 {spot.walk}分</b><small>情報確認 {spot.verified}</small></div>
+                <div className="spot-content">
+                  <div className="spot-top"><div><p>{spot.station}・{spot.hours}</p><h3>{spot.name}</h3></div><button type="button" className={favorites[spot.id] ? 'favorite active' : 'favorite'} onClick={() => toggleFavorite(spot.id)} aria-label={`${spot.name}を保存`}>{favorites[spot.id] ? '★' : '☆'}</button></div>
+                  <p>{spot.summary}</p>
+                  <div className="rating"><strong>★ {spot.rating}</strong><span>現地レポート {spot.reviews + reviews.filter((item) => item.spot === spot.name).length}件</span><b>目安 ¥{spot.price.toLocaleString()}</b></div>
+                  <div className="tag-list">{spot.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+                  <div className="spot-actions"><a href={`https://www.google.com/maps/search/${encodeURIComponent(`${spot.station} ${spot.name}`)}`} target="_blank" rel="noreferrer">地図で確認</a><button type="button" onClick={() => { setReviewForm((current) => ({ ...current, spot: spot.name })); document.querySelector('#voices')?.scrollIntoView({ behavior: 'smooth' }) }}>現地情報を投稿</button></div>
+                </div>
+              </article>
+            ))}
+          </div>
+          {!results.length && <div className="empty-state"><b>条件に合うスポットがまだありません</b><p>カテゴリーを「すべて」に戻すか、現地情報を投稿してください。</p></div>}
+        </section>
+
+        <section className="revenue-strip" aria-label="予約・比較サービス">
+          <div><p className="eyebrow">TRIP READY</p><h2>移動と宿泊も、まとめて準備</h2><small>一部リンクは提携サービスへの広告リンクです。</small></div>
+          <div className="revenue-links">{revenueLinks.map((item) => <a key={item.label} href={item.href} target="_blank" rel="sponsored nofollow noreferrer"><span>{item.icon}</span><b>{item.label}<small>{item.note}</small></b><i>↗</i></a>)}</div>
+        </section>
+
+        <section className="community-grid" id="voices">
+          <div className="community-copy">
+            <p className="eyebrow">LOCAL VOICES</p><h2>あなたの「今」が、<br/>次の遠征者を助けます。</h2>
+            <p>営業時間、混雑、設備など、現地で分かった小さな情報を共有してください。投稿は内容確認後の公開を想定しています。</p>
+            <div className="voice-stats"><div><strong>{reviews.length}</strong><span>この端末からの投稿</span></div><div><strong>3分</strong><span>投稿の目安</span></div></div>
+          </div>
+          <form className="report-form" onSubmit={submitReview}>
+            <h3>現地レポートを送る</h3>
+            <label>施設<select value={reviewForm.spot} onChange={(e) => setReviewForm({ ...reviewForm, spot: e.target.value })}>{spots.map((spot) => <option key={spot.id}>{spot.name}</option>)}</select></label>
+            <label>確認できたこと<select value={reviewForm.status} onChange={(e) => setReviewForm({ ...reviewForm, status: e.target.value })}><option>営業していた</option><option>混雑していた</option><option>空いていた</option><option>設備情報が違った</option><option>休業・閉店していた</option></select></label>
+            <label>ひとこと<textarea required value={reviewForm.note} onChange={(e) => setReviewForm({ ...reviewForm, note: e.target.value })} placeholder="例：6時45分ごろ、女性用メイク台は待ちなしでした。" /></label>
+            <button type="submit">確認用レポートを送信</button>
+            <small>個人情報、誹謗中傷、宣伝投稿は送信しないでください。</small>
           </form>
-        </article>
-      </section>
-    </main>
+        </section>
+
+        <section className="alert-section" id="alerts">
+          <div><span className="alert-icon">!</span><p className="eyebrow">SMART ALERT</p><h2>変更を見逃さない。</h2><p>お気に入り地域の新着、営業時間変更、値下がり情報を受け取る通知機能のMVPです。</p></div>
+          <form onSubmit={submitAlert}>
+            <label>通知テーマ<select value={alertForm.topic} onChange={(e) => setAlertForm({ ...alertForm, topic: e.target.value })}><option>名古屋駅の新着・変更</option><option>ホテルの値下がり</option><option>高速バスの空席</option><option>推し活・イベント遠征情報</option></select></label>
+            <label>メールアドレス<input type="email" required value={alertForm.email} onChange={(e) => setAlertForm({ ...alertForm, email: e.target.value })} placeholder="you@example.com" /></label>
+            <button type="submit">通知条件を保存</button>
+            <small>保存済み条件：{alerts.length}件。このMVPでは外部送信しません。</small>
+          </form>
+        </section>
+
+        <section className="editorial-note">
+          <b>情報の信頼性について</b><p>掲載施設・料金・口コミはMVP用のサンプルです。本公開版では公式情報、確認日、ユーザー投稿、訂正履歴を分けて表示し、広告掲載の有無が通常の評価順位に影響しない設計とします。</p>
+        </section>
+      </main>
+
+      {message && <button className="toast" type="button" onClick={() => setMessage('')}>{message}<span>×</span></button>}
+      <footer><a className="brand" href="#top"><span className="brand-mark">R</span><span><strong>遠征ラクナビ</strong><small>ARRIVAL SUPPORT</small></span></a><p>到着後の困ったを、みんなの情報でラクにする。</p><div><a href="#spots">施設検索</a><a href="#voices">投稿ガイド</a><a href="#alerts">通知設定</a><a href="#top">広告・運営方針</a></div><small>© 2026 遠征ラクナビ / MVP prototype</small></footer>
+    </div>
   )
 }
 
