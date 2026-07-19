@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "mobile": "npm --prefix apps/mobile start"
+    "mobile": "npm --prefix apps/mobile start",
+    "api": "npm --prefix services/api start",
+    "test:api": "npm --prefix services/api test"
   },
   "dependencies": {
     "qrcode": "^1.5.4",

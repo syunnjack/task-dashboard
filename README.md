@@ -20,6 +20,16 @@ npm install
 npm start
 ```
 
+## Shared API
+
+```bash
+Copy-Item .env.example .env
+npm run api
+npm run test:api
+```
+
+Webを共有APIへ接続する場合は、Web側の`VITE_SUKIMA_API_URL`を設定します。未設定時は端末内デモモードで動作します。
+
 ## Documentation
 
 - `docs/MONOREPO_BLUEPRINT.md`: 30ブランド、画面、通知、収益、ドメイン設計
@@ -40,4 +50,4 @@ npm start
 - 匿名センサー収容率のデモ入力
 - 複数信号を統合した混雑スコアと信頼度
 
-現在の一次データは端末内に保存するデモです。本番のバックグラウンド通知、認証、共有データベース、センサーゲートウェイは次フェーズです。
+共有APIにはSQLite永続化、施設セッション、複数ゾーン、匿名チェックイン、混雑集計、通知購読と閾値ジョブを実装しています。WebはAPI接続時に施設ログインと共有DB保存へ切り替わり、未設定時は端末内デモへフォールバックします。実際のPush送信、外部ID連携、本番センサーゲートウェイは次フェーズです。
