@@ -1,0 +1,10 @@
+{
+  "name":"SUKIMA PLATFORM",
+  "short_name":"SUKIMA",
+  "description":"混雑ヒートマップと空き通知の30ブランド共通基盤",
+  "start_url":"/",
+  "display":"standalone",
+  "background_color":"#f2f3ed",
+  "theme_color":"#155e52",
+  "icons":[{"src":"/favicon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

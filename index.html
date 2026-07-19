@@ -2,30 +2,16 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="この子だれ？は、作品名・品番・メーカー・公開クレジットから出演女優の名前を探せる検索サイトです。"
-    />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "この子だれ？",
-        "url": "https://darekore.jp/",
-        "description": "作品名・品番・メーカー・公開クレジットから出演女優の名前を探せる検索サイトです。",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://darekore.jp/?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
-      }
-    </script>
-    <title>この子だれ？</title>
+    <meta name="theme-color" content="#155e52" />
+    <meta name="description" content="外部の混雑APIを使わず、施設入力・QR・整理券・センサーから混雑を可視化して空いた瞬間を知らせる30ブランド共通基盤。" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" />
+    <title>SUKIMA PLATFORM｜混雑を避けて、いい時間を選ぶ</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}</script>
   </body>
 </html>
