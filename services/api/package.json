@@ -1,0 +1,15 @@
+{
+  "name": "@sukima/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "worker": "node worker.mjs",
+    "vapid": "node generate-vapid.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

@@ -1,20 +1,68 @@
-# task-dashboard
+# SUKIMA PLATFORM
 
-React + Vite で作成したタスクダッシュボードです。
+外部の混雑APIを競争力の中心にせず、施設入力・QR・整理券・センサーで一次データを作る混雑ヒートマップ／空き通知基盤です。1つのWeb/PWAとExpoアプリから30ブランドを設定で展開します。
 
-## Deploy
+現在のトップ画面には、韓国・台湾のチア、ライブ、グルメ、観光、コスメ、成人限定イベントに対応する「推し旅AIコンシェルジュ」MVPを実装しています。会話結果から渡航準備チェックリストと広告表記付きの予約・購入候補を作成します。
 
-このリポジトリは GitHub Pages での公開を前提にしています。
+`SUKIMA INSIGHT`は、GitHub上の全リポジトリとWeb/PWA/アプリを対象に、アクセス数、PV、CTR、CVR、成果、売上、ファネル、改善候補を横断表示する販売可能な分析SaaSのMVPです。共通SDKは`packages/analytics-sdk`にあります。
 
-- Production domain: `darekore.jp`
-- Build command: `npm run build`
-- Build output directory: `dist`
+## Web
 
-`main` ブランチへ反映されると、GitHub Actions が自動でビルドして GitHub Pages へデプロイします。
+```bash
+npm install
+npm run dev
+npm run build
+```
 
-## Commands
+`?brand=sauna`、`?brand=parking`のようにブランドを直接指定できます。
 
-- `npm run dev`: 開発サーバー起動
-- `npm run build`: 本番ビルド
-- `npm run lint`: 静的解析
-- `npm run preview`: ビルド結果のプレビュー
+## Mobile
+
+```bash
+cd apps/mobile
+npm install
+npm start
+```
+
+## Shared API
+
+```bash
+Copy-Item .env.example .env
+npm run api
+npm run test:api
+```
+
+通知配信ワーカーは別プロセスで実行します。初期値はドライランなので、VAPID鍵を設定するまで実通知は送られません。
+
+```bash
+npm --prefix services/api run vapid
+npm --prefix services/api run worker
+```
+
+Web Push と Expo Push に対応し、失敗時は最大4回まで指数バックオフで再試行します。施設アカウントには owner / editor / viewer 権限があり、匿名チェックインとログインにはレート制限があります。
+
+Webでは`VITE_SUKIMA_API_URL`、モバイルでは`EXPO_PUBLIC_SUKIMA_API_URL`と`EXPO_PUBLIC_EAS_PROJECT_ID`を設定すると、端末のPush購読情報が共有APIへ登録されます。
+
+Webを共有APIへ接続する場合は、Web側の`VITE_SUKIMA_API_URL`を設定します。未設定時は端末内デモモードで動作します。
+
+## Documentation
+
+- `docs/MONOREPO_BLUEPRINT.md`: 30ブランド、画面、通知、収益、ドメイン設計
+- `docs/PRODUCT_PLAN.md`: 市場候補と初期プロダクト計画
+
+## Current prototype scope
+
+- Canvas / SVGによるAPI不要のヒートマップ
+- 時刻別混雑予測
+- 30ブランド切替
+- Web Notification権限と条件保存
+- Service WorkerのPush受信処理
+- Expo Notifications登録画面
+- 空いている代替候補と収益CTA
+- 施設スタッフの3段階混雑更新
+- 整理券の待ち組数入力
+- 読み取り可能な現地チェックインQR
+- 匿名センサー収容率のデモ入力
+- 複数信号を統合した混雑スコアと信頼度
+
+共有APIにはSQLite永続化、施設セッション、複数ゾーン、匿名チェックイン、混雑集計、通知購読と閾値ジョブを実装しています。WebはAPI接続時に施設ログインと共有DB保存へ切り替わり、未設定時は端末内デモへフォールバックします。実際のPush送信、外部ID連携、本番センサーゲートウェイは次フェーズです。

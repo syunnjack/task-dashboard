@@ -1,0 +1,3 @@
+{
+  "expo":{"name":"SUKIMA PLATFORM","slug":"sukima-platform","scheme":"sukima","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"light","plugins":["expo-router","expo-notifications"],"ios":{"supportsTablet":true,"bundleIdentifier":"jp.sukima.platform"},"android":{"package":"jp.sukima.platform"},"extra":{"router":{}}}
+}
