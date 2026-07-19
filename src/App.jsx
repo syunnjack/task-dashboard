@@ -7,6 +7,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard.jsx'
 import { readEvents, scoreCrowd } from './lib/crowdStore.js'
 import { apiConfigured } from './lib/apiClient.js'
 import { registerWebPush } from './lib/pushClient.js'
+import DqWalkPlanner from './components/DqWalkPlanner.jsx'
 
 const baseSpots = [
   { id:1, x:24, y:31, base:82, name:'中央エリア', wait:32 },
@@ -75,7 +76,7 @@ function BrandSwitcher({ current, onChange }) {
   </div>
 }
 
-function App() {
+function ExistingPlatform() {
   const params = new URLSearchParams(window.location.search)
   const [slug,setSlug] = useState(params.get('brand') || 'tourism')
   const [hour,setHour] = useState(Math.min(23,Math.max(7,new Date().getHours())))
@@ -155,5 +156,7 @@ function App() {
     <footer><a className="brand" href="#top"><span>●</span>{brand.name}</a><p>混雑情報は推定値を含みます。実際の状況と異なる場合があります。</p><p>© 2026 SUKIMA PLATFORM</p></footer>
   </main>
 }
+
+function App(){return new URLSearchParams(window.location.search).get('tool')==='dqwalk'?<DqWalkPlanner/>:<ExistingPlatform/>}
 
 export default App
