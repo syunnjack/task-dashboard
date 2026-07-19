@@ -3,6 +3,7 @@ import './App.css'
 import { getVertical, verticals } from './data/verticals.js'
 import OperationsPanel from './components/OperationsPanel.jsx'
 import TravelConcierge from './components/TravelConcierge.jsx'
+import AnalyticsDashboard from './components/AnalyticsDashboard.jsx'
 import { readEvents, scoreCrowd } from './lib/crowdStore.js'
 import { apiConfigured } from './lib/apiClient.js'
 import { registerWebPush } from './lib/pushClient.js'
@@ -124,7 +125,7 @@ function App() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#top"><span>●</span>{brand.name}</a>
-      <nav><a href="#concierge">旅支度AI</a><a href="#live">混雑状況</a><a href="#operations">データ入力</a><a href="#notify">空き通知</a></nav>
+      <nav><a href="#concierge">旅支度AI</a><a href="#live">混雑状況</a><a href="#insight">効果測定</a><a href="#notify">空き通知</a></nav>
       <BrandSwitcher current={brand} onChange={changeBrand}/>
     </header>
 
@@ -134,6 +135,8 @@ function App() {
     </section>
 
     <TravelConcierge />
+
+    <AnalyticsDashboard />
 
     <section className="live" id="live">
       <div className="live-toolbar"><div><p className="eyebrow">LIVE DENSITY</p><h2>{brand.name} 混雑ヒートマップ</h2></div><label>時刻 <strong>{hour}:00</strong><input type="range" min="7" max="23" value={hour} onChange={(e) => setHour(Number(e.target.value))}/></label></div>

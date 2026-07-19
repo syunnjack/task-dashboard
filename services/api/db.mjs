@@ -22,6 +22,9 @@ function migrate(db){
     `CREATE INDEX IF NOT EXISTS crowd_events_zone_time_idx ON crowd_events(zone_id,created_at)`,
     `CREATE TABLE IF NOT EXISTS notification_subscriptions (id TEXT PRIMARY KEY, facility_id TEXT NOT NULL REFERENCES facilities(id), zone_id TEXT REFERENCES zones(id), endpoint TEXT NOT NULL UNIQUE, subscription_json TEXT NOT NULL, threshold INTEGER NOT NULL DEFAULT 40, offers INTEGER NOT NULL DEFAULT 0, last_notified_at TEXT, created_at TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS notification_jobs (id TEXT PRIMARY KEY, subscription_id TEXT NOT NULL REFERENCES notification_subscriptions(id), score INTEGER NOT NULL, payload_json TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT, next_attempt_at TEXT, created_at TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS analytics_events (id TEXT PRIMARY KEY, facility_id TEXT NOT NULL REFERENCES facilities(id), project_key TEXT NOT NULL DEFAULT 'task-dashboard', brand TEXT NOT NULL, app TEXT NOT NULL, session_hash TEXT NOT NULL, event_name TEXT NOT NULL, page TEXT, properties_json TEXT NOT NULL DEFAULT '{}', revenue REAL NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'JPY', occurred_at TEXT NOT NULL)`,
+    `CREATE INDEX IF NOT EXISTS analytics_events_facility_time_idx ON analytics_events(facility_id,occurred_at)`,
+    `CREATE INDEX IF NOT EXISTS analytics_events_name_time_idx ON analytics_events(event_name,occurred_at)`,
   ]
   for(const statement of statements) db.prepare(statement).run()
   const sessionColumns=db.prepare('PRAGMA table_info(sessions)').all().map((column)=>column.name)
@@ -30,4 +33,6 @@ function migrate(db){
   if(!jobColumns.includes('attempts'))db.prepare('ALTER TABLE notification_jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0').run()
   if(!jobColumns.includes('last_error'))db.prepare('ALTER TABLE notification_jobs ADD COLUMN last_error TEXT').run()
   if(!jobColumns.includes('next_attempt_at'))db.prepare('ALTER TABLE notification_jobs ADD COLUMN next_attempt_at TEXT').run()
+  const analyticsColumns=db.prepare('PRAGMA table_info(analytics_events)').all().map((column)=>column.name)
+  if(!analyticsColumns.includes('project_key'))db.prepare("ALTER TABLE analytics_events ADD COLUMN project_key TEXT NOT NULL DEFAULT 'task-dashboard'").run()
 }

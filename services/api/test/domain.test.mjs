@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { openDatabase } from '../db.mjs'
-import { acceptInvite,addEvent,createInvite,createSession,evaluateNotifications,seedFacility,snapshot,subscribe } from '../domain.mjs'
+import { acceptInvite,addEvent,analyticsSummary,createInvite,createSession,evaluateNotifications,recordAnalyticsEvent,seedFacility,snapshot,subscribe } from '../domain.mjs'
 
 function setup(){const db=openDatabase(':memory:');seedFacility(db);return db}
 
@@ -44,4 +44,14 @@ test('push subscriptions are scoped to an existing facility and zone',()=>{
   const saved=subscribe(db,{facilityId:'demo-sauna',zoneId:zone.id,endpoint:'expo-token',subscription:{platform:'expo',token:'expo-token'},threshold:200})
   assert.equal(saved.threshold,90)
   assert.throws(()=>subscribe(db,{facilityId:'missing',endpoint:'bad',subscription:{}}),/facility_not_found/)
+})
+
+test('analytics aggregates funnel and revenue without storing raw session ids',()=>{
+  const db=setup()
+  recordAnalyticsEvent(db,{sessionId:'raw-device-id',eventName:'page_view'})
+  recordAnalyticsEvent(db,{sessionId:'raw-device-id',eventName:'offer_impression'})
+  recordAnalyticsEvent(db,{sessionId:'raw-device-id',eventName:'affiliate_click',properties:{placement:'checklist',secret:'discard'}})
+  recordAnalyticsEvent(db,{sessionId:'raw-device-id',eventName:'conversion',revenue:2400})
+  const summary=analyticsSummary(db,'demo-sauna',30);const stored=db.prepare('SELECT * FROM analytics_events LIMIT 1').get()
+  assert.equal(summary.sessions,1);assert.equal(summary.ctr,100);assert.equal(summary.revenue,2400);assert.equal(summary.byProject[0].project,'task-dashboard');assert.notEqual(stored.session_hash,'raw-device-id');assert.equal(JSON.parse(stored.properties_json).secret,undefined)
 })

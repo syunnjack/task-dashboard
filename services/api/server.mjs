@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import { openDatabase } from './db.mjs'
-import { acceptInvite,addEvent,authenticate,createInvite,createSession,evaluateNotifications,seedFacility,snapshot,subscribe } from './domain.mjs'
+import { acceptInvite,addEvent,analyticsSummary,authenticate,createInvite,createSession,evaluateNotifications,recordAnalyticsEvent,seedFacility,snapshot,subscribe } from './domain.mjs'
 import { rateLimit } from './rate-limit.mjs'
 
 const db=openDatabase()
@@ -51,6 +51,11 @@ const server=createServer(async(request,response)=>{
       if(!rate.allowed)return send(response,429,{error:'subscription_rate_limited',retryAfter:rate.retryAfter})
       const input=await body(request);return send(response,201,subscribe(db,input))
     }
+    if(request.method==='POST'&&url.pathname==='/v1/analytics/events'){
+      const rate=rateLimit(`analytics:${request.socket.remoteAddress}`,{limit:120,windowMs:60*60_000})
+      if(!rate.allowed)return send(response,429,{error:'analytics_rate_limited',retryAfter:rate.retryAfter})
+      const input=await body(request);return send(response,202,recordAnalyticsEvent(db,input))
+    }
     const session=authenticate(db,request.headers.authorization)
     if(!session)return send(response,401,{error:'authentication_required'})
     const {facilityId,role}=session
@@ -67,6 +72,7 @@ const server=createServer(async(request,response)=>{
       if(role==='viewer')return send(response,403,{error:'editor_role_required'})
       return send(response,200,{dryRun:process.env.PUSH_DRY_RUN!=='false',jobs:evaluateNotifications(db,facilityId)})
     }
+    if(request.method==='GET'&&url.pathname==='/v1/analytics/summary')return send(response,200,analyticsSummary(db,facilityId,url.searchParams.get('days')))
     return send(response,404,{error:'not_found'})
   }catch(error){return send(response,error.message==='body_too_large'?413:400,{error:error.message})}
 })

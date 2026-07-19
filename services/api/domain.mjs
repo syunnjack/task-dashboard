@@ -111,3 +111,32 @@ export function evaluateNotifications(db,facilityId){
   }
   return jobs
 }
+
+const analyticsEvents=new Set(['session_started','page_view','offer_impression','concierge_started','concierge_completed','checklist_completed','notification_subscribed','affiliate_click','booking_started','conversion','error'])
+const analyticsPropertyKeys=new Set(['campaign','placement','category','itemId','experiment','variant','contentClass'])
+
+export function recordAnalyticsEvent(db,{facilityId='demo-sauna',projectKey='task-dashboard',brand='tourism',app='web',sessionId,eventName,page,properties={},revenue=0,currency='JPY'}){
+  if(!analyticsEvents.has(eventName))throw new Error('invalid_analytics_event')
+  if(!db.prepare('SELECT id FROM facilities WHERE id=?').get(facilityId))throw new Error('facility_not_found')
+  const safeProperties=Object.fromEntries(Object.entries(properties).filter(([key,value])=>analyticsPropertyKeys.has(key)&&['string','number','boolean'].includes(typeof value)).slice(0,8))
+  const occurredAt=new Date().toISOString();const id=randomUUID();const safeRevenue=Math.max(0,Math.min(10_000_000,Number(revenue)||0))
+  const dailySession=hash(`${occurredAt.slice(0,10)}:${sessionId||token()}`)
+  db.prepare('INSERT INTO analytics_events(id,facility_id,project_key,brand,app,session_hash,event_name,page,properties_json,revenue,currency,occurred_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,facilityId,String(projectKey).replace(/[^a-zA-Z0-9._/-]/g,'').slice(0,120)||'unknown',String(brand).slice(0,40),['web','pwa','ios','android'].includes(app)?app:'web',dailySession,eventName,String(page||'').slice(0,200),JSON.stringify(safeProperties),safeRevenue,String(currency).slice(0,3),occurredAt)
+  return {id,accepted:true}
+}
+
+export function analyticsSummary(db,facilityId,days=30){
+  const safeDays=Math.min(365,Math.max(1,Number(days)||30));const since=new Date(Date.now()-safeDays*86400_000).toISOString()
+  const rows=db.prepare('SELECT event_name,app,brand,project_key,session_hash,revenue FROM analytics_events WHERE facility_id=? AND occurred_at>=?').all(facilityId,since)
+  const count=(name)=>rows.filter((row)=>row.event_name===name).length
+  const sessions=new Set(rows.map((row)=>row.session_hash)).size;const views=count('page_view');const impressions=count('offer_impression');const clicks=count('affiliate_click');const conversions=count('conversion');const revenue=Math.round(rows.reduce((sum,row)=>sum+row.revenue,0))
+  const byApp=Object.entries(Object.groupBy(rows,(row)=>row.app)).map(([app,items])=>({app,events:items.length,revenue:Math.round(items.reduce((sum,row)=>sum+row.revenue,0))}))
+  const byProject=Object.entries(Object.groupBy(rows,(row)=>row.project_key)).map(([project,items])=>({project,sessions:new Set(items.map((row)=>row.session_hash)).size,views:items.filter((row)=>row.event_name==='page_view').length,impressions:items.filter((row)=>row.event_name==='offer_impression').length,clicks:items.filter((row)=>row.event_name==='affiliate_click').length,conversions:items.filter((row)=>row.event_name==='conversion').length,revenue:Math.round(items.reduce((sum,row)=>sum+row.revenue,0))})).sort((a,b)=>b.revenue-a.revenue)
+  const funnel=[['閲覧',views],['AI準備開始',count('concierge_started')],['AI準備完了',count('concierge_completed')],['広告クリック',clicks],['成果',conversions]].map(([label,value])=>({label,value}))
+  const recommendations=[]
+  if(views>0&&count('concierge_started')/views<.2)recommendations.push('トップ画面のAI準備開始ボタンを目立たせる')
+  if(count('concierge_completed')>0&&clicks/count('concierge_completed')<.25)recommendations.push('準備結果と予約候補の関連性を改善する')
+  if(clicks>0&&conversions/clicks<.03)recommendations.push('広告先、価格表示、キャンセル条件を再確認する')
+  if(!recommendations.length)recommendations.push('ブランド別A/Bテストを開始し、改善幅を検証する')
+  return {periodDays:safeDays,sessions,views,impressions,clicks,ctr:impressions?Math.round(clicks/impressions*1000)/10:0,conversions,revenue,conversionRate:clicks?Math.round(conversions/clicks*1000)/10:0,revenuePerSession:sessions?Math.round(revenue/sessions):0,funnel,byApp,byProject,recommendations}
+}

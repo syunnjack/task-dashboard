@@ -16,3 +16,5 @@ export const postCheckin=(facilityId,zoneId)=>request('/v1/events/checkin',{meth
 export const evaluateNotifications=(token)=>request('/v1/notifications/evaluate',{token,method:'POST'})
 export const getPushPublicKey=()=>request('/v1/push/public-key')
 export const savePushSubscription=(input)=>request('/v1/subscriptions',{method:'POST',body:input})
+export const fetchAnalyticsSummary=(token,days=30)=>request(`/v1/analytics/summary?days=${days}`,{token})
+export const postAnalyticsEvent=(input)=>request('/v1/analytics/events',{method:'POST',body:input})
