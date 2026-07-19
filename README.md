@@ -28,6 +28,15 @@ npm run api
 npm run test:api
 ```
 
+通知配信ワーカーは別プロセスで実行します。初期値はドライランなので、VAPID鍵を設定するまで実通知は送られません。
+
+```bash
+npm --prefix services/api run vapid
+npm --prefix services/api run worker
+```
+
+Web Push と Expo Push に対応し、失敗時は最大4回まで指数バックオフで再試行します。施設アカウントには owner / editor / viewer 権限があり、匿名チェックインとログインにはレート制限があります。
+
 Webを共有APIへ接続する場合は、Web側の`VITE_SUKIMA_API_URL`を設定します。未設定時は端末内デモモードで動作します。
 
 ## Documentation

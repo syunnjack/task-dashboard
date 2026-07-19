@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { openDatabase } from '../db.mjs'
-import { addEvent,createSession,evaluateNotifications,seedFacility,snapshot,subscribe } from '../domain.mjs'
+import { acceptInvite,addEvent,createInvite,createSession,evaluateNotifications,seedFacility,snapshot,subscribe } from '../domain.mjs'
 
 function setup(){const db=openDatabase(':memory:');seedFacility(db);return db}
 
@@ -24,4 +24,17 @@ test('notification job is created when score is below threshold',()=>{
   subscribe(db,{facilityId:'demo-sauna',zoneId:zone.id,endpoint:'https://push.example/1',subscription:{endpoint:'https://push.example/1'},threshold:100})
   const jobs=evaluateNotifications(db,'demo-sauna')
   assert.equal(jobs.length,1);assert.equal(jobs[0].payload.url.includes('demo-sauna'),true)
+})
+
+test('owner can invite an editor and editor receives scoped session',()=>{
+  const db=setup();const invite=createInvite(db,'demo-sauna','editor')
+  const member=acceptInvite(db,invite.inviteToken,'店長');const session=createSession(db,'demo-sauna',member.accessKey)
+  assert.equal(session.role,'editor');assert.equal(session.facility.id,'demo-sauna')
+  assert.throws(()=>acceptInvite(db,invite.inviteToken,'再利用'),/invalid_invite/)
+})
+
+test('notification jobs include retry columns',()=>{
+  const db=openDatabase(':memory:')
+  const columns=db.prepare('PRAGMA table_info(notification_jobs)').all().map((column)=>column.name)
+  assert.equal(['attempts','last_error','next_attempt_at'].every((name)=>columns.includes(name)),true)
 })

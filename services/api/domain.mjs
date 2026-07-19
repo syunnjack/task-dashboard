@@ -15,16 +15,40 @@ export function seedFacility(db,{id='demo-sauna',brand='sauna',name='ととの�
 
 export function createSession(db,facilityId,secret){
   const facility=db.prepare('SELECT * FROM facilities WHERE id=?').get(facilityId)
-  if(!facility||!safeEqual(facility.secret_hash,hash(secret))) return null
+  if(!facility)return null
+  let role='owner'
+  if(!safeEqual(facility.secret_hash,hash(secret))){
+    const member=db.prepare('SELECT role FROM facility_members WHERE facility_id=? AND access_hash=?').get(facilityId,hash(secret))
+    if(!member)return null
+    role=member.role
+  }
   const raw=token();const expires=new Date(Date.now()+12*60*60*1000).toISOString()
-  db.prepare('INSERT INTO sessions(token_hash,facility_id,expires_at) VALUES(?,?,?)').run(hash(raw),facilityId,expires)
-  return {token:raw,expiresAt:expires,facility:{id:facility.id,name:facility.name,brand:facility.brand}}
+  db.prepare('INSERT INTO sessions(token_hash,facility_id,expires_at,role) VALUES(?,?,?,?)').run(hash(raw),facilityId,expires,role)
+  return {token:raw,expiresAt:expires,role,facility:{id:facility.id,name:facility.name,brand:facility.brand}}
 }
 
 export function authenticate(db,header=''){
   const raw=header.startsWith('Bearer ')?header.slice(7):''
   if(!raw)return null
-  return db.prepare('SELECT facility_id FROM sessions WHERE token_hash=? AND expires_at>?').get(hash(raw),new Date().toISOString())?.facility_id??null
+  const session=db.prepare('SELECT facility_id,role FROM sessions WHERE token_hash=? AND expires_at>?').get(hash(raw),new Date().toISOString())
+  return session?{facilityId:session.facility_id,role:session.role}:null
+}
+
+export function createInvite(db,facilityId,role='viewer'){
+  if(!['editor','viewer'].includes(role))throw new Error('invalid_role')
+  const raw=token();const expiresAt=new Date(Date.now()+48*60*60*1000).toISOString()
+  db.prepare('INSERT INTO facility_invites(token_hash,facility_id,role,expires_at) VALUES(?,?,?,?)').run(hash(raw),facilityId,role,expiresAt)
+  return {inviteToken:raw,role,expiresAt}
+}
+
+export function acceptInvite(db,inviteToken,name){
+  const now=new Date().toISOString()
+  const invite=db.prepare('SELECT * FROM facility_invites WHERE token_hash=? AND expires_at>? AND used_at IS NULL').get(hash(inviteToken),now)
+  if(!invite||!name?.trim())throw new Error('invalid_invite')
+  const accessKey=token();const member={id:randomUUID(),facilityId:invite.facility_id,name:name.trim(),role:invite.role,createdAt:now}
+  db.prepare('INSERT INTO facility_members(id,facility_id,name,role,access_hash,created_at) VALUES(?,?,?,?,?,?)').run(member.id,member.facilityId,member.name,member.role,hash(accessKey),member.createdAt)
+  db.prepare('UPDATE facility_invites SET used_at=? WHERE token_hash=?').run(now,hash(inviteToken))
+  return {...member,accessKey}
 }
 
 export function addEvent(db,{facilityId,zoneId,type,value,source}){
