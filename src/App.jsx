@@ -1,283 +1,162 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import actressRecords from './data/actresses.json'
+import { getVertical, verticals } from './data/verticals.js'
+import OperationsPanel from './components/OperationsPanel.jsx'
+import TravelConcierge from './components/TravelConcierge.jsx'
+import AnalyticsDashboard from './components/AnalyticsDashboard.jsx'
+import { readEvents, scoreCrowd } from './lib/crowdStore.js'
+import { apiConfigured } from './lib/apiClient.js'
+import { registerWebPush } from './lib/pushClient.js'
+import DqWalkPlanner from './components/DqWalkPlanner.jsx'
 
-const featuredCreators = [
-  {
-    name: '作品タイトルから探す',
-    role: 'title / maker / label',
-    tag: '#作品名 #品番 #メーカー',
-    tone: 'coral',
-  },
-  {
-    name: '特徴タグで絞る',
-    role: 'scene / costume / genre',
-    tag: '#衣装 #髪型 #ジャンル',
-    tone: 'mint',
-  },
-  {
-    name: '公式リンクを確認',
-    role: 'profile / SNS / store',
-    tag: '#公式SNS #配信ページ',
-    tone: 'sky',
-  },
+const baseSpots = [
+  { id:1, x:24, y:31, base:82, name:'中央エリア', wait:32 },
+  { id:2, x:48, y:22, base:56, name:'北エリア', wait:14 },
+  { id:3, x:72, y:35, base:37, name:'東エリア', wait:5 },
+  { id:4, x:31, y:69, base:68, name:'西エリア', wait:19 },
+  { id:5, x:61, y:64, base:28, name:'南エリア', wait:3 },
+  { id:6, x:80, y:76, base:48, name:'別館エリア', wait:10 },
 ]
 
-const categories = ['作品名', '品番', 'メーカー', '出演者', 'ジャンル', '配信サイト']
-
-const affiliateConfig = {
-  dmmId: import.meta.env.VITE_DMM_AFFILIATE_ID || import.meta.env.VITE_FANZA_AFFILIATE_ID || '',
-  dugaTemplate: import.meta.env.VITE_DUGA_AFFILIATE_URL || '',
-  mgsTemplate: import.meta.env.VITE_MGS_AFFILIATE_URL || '',
-  sodTemplate: import.meta.env.VITE_SOD_AFFILIATE_URL || '',
-  dticashTemplate: import.meta.env.VITE_DTICASH_AFFILIATE_URL || '',
+function crowdAt(spot, hour) {
+  const midday = Math.max(0, 1 - Math.abs(hour - 13) / 5) * 18
+  const evening = Math.max(0, 1 - Math.abs(hour - 19) / 4) * 22
+  return Math.min(99, Math.max(8, Math.round(spot.base - 16 + midday + evening)))
 }
 
-function dmmSearchUrl(name) {
-  return `https://www.dmm.co.jp/search/=/searchstr=${encodeURIComponent(name)}/`
+function crowdLabel(score) {
+  if (score >= 80) return ['かなり混雑','danger']
+  if (score >= 60) return ['混雑','warm']
+  if (score >= 40) return ['やや混雑','yellow']
+  return ['空いています','calm']
 }
 
-function buildDmmAffiliateUrl(record) {
-  const targetUrl = record.sourceUrl?.includes('dmm.co.jp')
-    ? record.sourceUrl
-    : dmmSearchUrl(record.name)
-
-  if (!affiliateConfig.dmmId) return targetUrl
-  if (targetUrl.includes('al.dmm.co.jp')) return targetUrl
-
-  const params = new URLSearchParams({
-    lurl: targetUrl,
-    af_id: affiliateConfig.dmmId,
-    ch: 'api',
-  })
-  return `https://al.dmm.co.jp/?${params}`
+function HeatMap({ points, selected, onSelect }) {
+  const canvasRef = useRef(null)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const draw = () => {
+      const box = canvas.getBoundingClientRect()
+      const ratio = window.devicePixelRatio || 1
+      const ctx = canvas.getContext('2d')
+      canvas.width = box.width * ratio
+      canvas.height = box.height * ratio
+      ctx.setTransform(ratio,0,0,ratio,0,0)
+      ctx.clearRect(0,0,box.width,box.height)
+      points.forEach((point) => {
+        const x = box.width * point.x / 100
+        const y = box.height * point.y / 100
+        const radius = 34 + point.crowd * .55
+        const color = point.crowd >= 75 ? '234,64,64' : point.crowd >= 50 ? '249,144,54' : '45,180,128'
+        const gradient = ctx.createRadialGradient(x,y,0,x,y,radius)
+        gradient.addColorStop(0,`rgba(${color},.72)`)
+        gradient.addColorStop(.48,`rgba(${color},.25)`)
+        gradient.addColorStop(1,`rgba(${color},0)`)
+        ctx.fillStyle = gradient
+        ctx.fillRect(x-radius,y-radius,radius*2,radius*2)
+      })
+    }
+    draw()
+    const observer = new ResizeObserver(draw)
+    observer.observe(canvas)
+    return () => observer.disconnect()
+  },[points])
+  return <div className="heat-map">
+    <div className="map-lines" aria-hidden="true" /><canvas ref={canvasRef} />
+    {points.map((point) => <button key={point.id} className={`heat-pin ${selected === point.id ? 'selected' : ''}`} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={() => onSelect(point.id)} aria-label={`${point.name} 混雑度${point.crowd}%`}>{point.crowd}</button>)}
+    <div className="legend"><i className="calm"/>空き<i className="yellow"/>通常<i className="danger"/>混雑</div>
+  </div>
 }
 
-function buildTemplateUrl(template, record) {
-  if (!template) return ''
-  return template
-    .replaceAll('{name}', encodeURIComponent(record.name))
-    .replaceAll('{code}', encodeURIComponent(record.code || record.name))
-    .replaceAll('{sourceUrl}', encodeURIComponent(record.sourceUrl || dmmSearchUrl(record.name)))
+function BrandSwitcher({ current, onChange }) {
+  const [open,setOpen] = useState(false)
+  return <div className="brand-switcher">
+    <button className="switcher-button" onClick={() => setOpen(!open)} aria-expanded={open}>30ブランド <span>⌄</span></button>
+    {open && <div className="brand-menu">{verticals.map((item) => <button key={item.slug} className={current.slug === item.slug ? 'active' : ''} onClick={() => { onChange(item.slug); setOpen(false) }}><span>{String(item.rank).padStart(2,'0')}</span><b>{item.name}</b><small>{item.category}</small></button>)}</div>}
+  </div>
 }
 
-function affiliateLinks(record) {
-  return [
-    ['FANZA', buildDmmAffiliateUrl(record)],
-    ['DUGA', buildTemplateUrl(affiliateConfig.dugaTemplate, record)],
-    ['MGS動画', buildTemplateUrl(affiliateConfig.mgsTemplate, record)],
-    ['SOD', buildTemplateUrl(affiliateConfig.sodTemplate, record)],
-    ['DTICASH', buildTemplateUrl(affiliateConfig.dticashTemplate, record)],
-  ].filter(([, url]) => Boolean(url))
-}
-
-const faqItems = [
-  {
-    question: '作品名や品番だけで出演女優名を探せますか？',
-    answer: '公開されている作品ページ、メーカー情報、販売サイトのクレジットをもとに候補を整理します。',
-  },
-  {
-    question: '名前が違う、別名義がある場合はどうなりますか？',
-    answer: '別名義、旧名義、SNS名をプロフィールに紐づけ、ユーザー投稿で補完できる設計にします。',
-  },
-  {
-    question: 'ユーザー投稿はすぐ掲載されますか？',
-    answer: '誤情報を防ぐため、投稿は証拠URLとあわせて受け付け、運営確認後に反映します。',
-  },
-]
-
-function App() {
-  const [query, setQuery] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-
-  const results = useMemo(() => {
-    const keyword = query.trim().toLowerCase()
-    if (!keyword) return actressRecords
-    return actressRecords.filter((record) => {
-      const haystack = [
-        record.name,
-        ...(record.aliases ?? []),
-        record.work,
-        record.code,
-        record.maker,
-        record.source,
-        ...record.tags,
-      ].join(' ').toLowerCase()
-      return haystack.includes(keyword)
+function ExistingPlatform() {
+  const params = new URLSearchParams(window.location.search)
+  const [slug,setSlug] = useState(params.get('brand') || 'tourism')
+  const [hour,setHour] = useState(Math.min(23,Math.max(7,new Date().getHours())))
+  const [selected,setSelected] = useState(1)
+  const [notice,setNotice] = useState(() => localStorage.getItem('sukima.notice') === 'on')
+  const [noticeMessage,setNoticeMessage] = useState('')
+  const [threshold,setThreshold] = useState(40)
+  const [crowdEvents,setCrowdEvents] = useState(readEvents)
+  const brand = getVertical(slug)
+  const points = useMemo(() => {
+    return baseSpots.map((spot,index) => {
+      const name=brand.zones[index % brand.zones.length]
+      const snapshot=scoreCrowd({brand:brand.slug,zone:name,baseline:crowdAt(spot,hour),events:crowdEvents})
+      return {...spot,name,crowd:snapshot.score,...snapshot}
     })
-  }, [query])
+  },[brand,hour,crowdEvents])
+  const active = points.find((item) => item.id === selected) ?? points[0]
+  const alternatives = [...points].filter((item) => item.id !== selected).sort((a,b) => a.crowd-b.crowd).slice(0,3)
 
-  const submitUgc = (event) => {
-    event.preventDefault()
-    setSubmitted(true)
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand',brand.primary)
+    document.documentElement.style.setProperty('--accent',brand.accent)
+    document.title = `${brand.name}｜混雑を避けて、いい時間を選ぶ`
+    const url = new URL(window.location)
+    url.searchParams.set('brand',brand.slug)
+    window.history.replaceState({},'',url)
+  },[brand])
+
+  const changeBrand = (next) => { setSlug(next); setSelected(1) }
+  const enableNotice = async () => {
+    try {
+      if(apiConfigured)await registerWebPush({facilityId:'demo-sauna',threshold})
+      else {
+        if (!('Notification' in window)) throw new Error('push_not_supported')
+        const permission = await Notification.requestPermission()
+        if(permission!=='granted')throw new Error('permission_denied')
+        new Notification(`${brand.name}の通知を登録しました`,{body:`混雑度が${threshold}%以下になったらお知らせします。`})
+      }
+      setNotice(true);setNoticeMessage(apiConfigured?'この端末へ空き通知を配信します。':'デモ通知を登録しました。')
+      localStorage.setItem('sukima.notice','on')
+    } catch(error) {
+      setNotice(false);localStorage.setItem('sukima.notice','off')
+      setNoticeMessage(error.message==='push_not_configured'?'通知サーバーの公開鍵が未設定です。':error.message==='permission_denied'?'ブラウザで通知を許可してください。':'この環境では通知を登録できません。')
+    }
   }
 
-  return (
-    <main className="site-shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Public creator discovery</p>
-          <h1>この子だれ？</h1>
-          <p className="lead">
-            気になった出演女優の名前を、作品名・品番・メーカー・ジャンル・公開クレジットから探せる
-            女優名検索サイト。
-          </p>
-          <form className="search-panel" aria-label="女優名検索" onSubmit={(event) => event.preventDefault()}>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="作品名、品番、メーカー、特徴タグで検索"
-            />
-            <button type="submit">探す</button>
-          </form>
-          <div className="quick-tags" aria-label="人気タグ">
-            {categories.map((category) => (
-              <a href="#creators" key={category}>{category}</a>
-            ))}
-          </div>
-        </div>
+  return <main>
+    <header className="topbar">
+      <a className="brand" href="#top"><span>●</span>{brand.name}</a>
+      <nav><a href="#concierge">旅支度AI</a><a href="#live">混雑状況</a><a href="#insight">効果測定</a><a href="#notify">空き通知</a></nav>
+      <BrandSwitcher current={brand} onChange={changeBrand}/>
+    </header>
 
-        <div className="visual-board" aria-label="注目クリエイター">
-          {featuredCreators.map((creator, index) => (
-            <article className={`creator-tile ${creator.tone}`} key={creator.name}>
-              <div className="avatar-mark">{creator.name.slice(0, 1)}</div>
-              <div>
-                <p className="tile-rank">No.0{index + 1}</p>
-                <h2>{creator.name}</h2>
-                <p>{creator.role}</p>
-                <span>{creator.tag}</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+    <section className="hero" id="top">
+      <div><p className="eyebrow">NO EXTERNAL CROWD API · OWN DATA PLATFORM</p><h1>混雑を避けて、<br/><em>いい時間</em>を選ぼう。</h1><p className="lead">{brand.category}の混雑を、施設入力・QRチェックイン・整理券・センサーから可視化。空いた瞬間を通知し、そのまま予約・購入できます。</p><div className="hero-actions"><a href="#live">現在の混雑を見る</a><button onClick={enableNotice}>{notice ? '通知登録済み' : '空いたら通知'}</button></div></div>
+      <aside className="brand-card"><p>おすすめ順位</p><strong>#{String(brand.rank).padStart(2,'0')}</strong><h2>{brand.category}</h2><dl><div><dt>ドメイン候補</dt><dd>{brand.domain}</dd></div><div><dt>収益導線</dt><dd>{brand.revenue}</dd></div></dl></aside>
+    </section>
 
-      <section className="results-band" aria-live="polite">
-        <div className="section-heading">
-          <p className="eyebrow">Search results</p>
-          <h2>候補一覧</h2>
-        </div>
-        <div className="result-list">
-          {results.map((record) => (
-            <article key={record.code}>
-              <div>
-                <p className="result-code">{record.code}</p>
-                <h3>{record.name}</h3>
-                {record.aliases?.length > 0 && (
-                  <p className="result-aliases">旧名・別名: {record.aliases.join(' / ')}</p>
-                )}
-                <p>{record.work} / {record.maker}</p>
-              </div>
-              <div className="result-tags" aria-label={`${record.name}のタグ`}>
-                {record.tags.map((tag) => (
-                  <button type="button" key={tag} onClick={() => setQuery(tag)}>
-                    #{tag}
-                  </button>
-                ))}
-              </div>
-              <div className="affiliate-actions" aria-label={`${record.name}の販売リンク`}>
-                {affiliateLinks(record).map(([label, url]) => (
-                  <a href={url} target="_blank" rel="noreferrer sponsored" key={label}>
-                    {label}
-                  </a>
-                ))}
-              </div>
-            </article>
-          ))}
-          {results.length === 0 && (
-            <p className="no-results">該当候補がありません。UGC投稿から情報提供できます。</p>
-          )}
-        </div>
-      </section>
+    <TravelConcierge />
 
-      <section className="content-band" id="creators">
-        <div className="section-heading">
-          <p className="eyebrow">Find faster</p>
-          <h2>名前にたどり着く導線</h2>
-        </div>
-        <div className="feature-grid">
-          <article>
-            <h3>作品情報検索</h3>
-            <p>タイトル、品番、メーカー、シリーズ名から公開されている出演者情報を探します。</p>
-          </article>
-          <article>
-            <h3>出演者プロフィール</h3>
-            <p>公式プロフィール、SNS、配信サイト、販売ページへの公開リンクを整理します。</p>
-          </article>
-          <article>
-            <h3>UGC補完</h3>
-            <p>ユーザー投稿で候補情報を集め、運営確認後に公開データとして反映します。</p>
-          </article>
-        </div>
-      </section>
+    <AnalyticsDashboard />
 
-      <section className="intent-band">
-        <div className="section-heading">
-          <p className="eyebrow">SEO / AIO / LLMO</p>
-          <h2>検索AIに伝わる情報設計</h2>
-        </div>
-        <div className="intent-grid">
-          <article>
-            <h3>作品名で女優名を知りたい</h3>
-            <p>「作品名 出演女優」「品番 女優名」「メーカー 出演者」の検索意図に対応します。</p>
-          </article>
-          <article>
-            <h3>似ている候補を比較したい</h3>
-            <p>候補者ごとに出演作品、公開SNS、別名義、活動ジャンルを比較できるページを作ります。</p>
-          </article>
-          <article>
-            <h3>公式情報へ移動したい</h3>
-            <p>プロフィールから公式SNS、配信サイト、販売ページ、ファンクラブへ自然に送客します。</p>
-          </article>
-        </div>
-      </section>
+    <section className="live" id="live">
+      <div className="live-toolbar"><div><p className="eyebrow">LIVE DENSITY</p><h2>{brand.name} 混雑ヒートマップ</h2></div><label>時刻 <strong>{hour}:00</strong><input type="range" min="7" max="23" value={hour} onChange={(e) => setHour(Number(e.target.value))}/></label></div>
+      <div className="live-layout"><HeatMap points={points} selected={selected} onSelect={setSelected}/><aside className="detail"><p>選択中</p><h3>{active.name}</h3><div className={`score ${crowdLabel(active.crowd)[1]}`}><strong>{active.crowd}%</strong><span>{crowdLabel(active.crowd)[0]}<small>待ち時間目安 {active.wait}分</small></span></div><div className="confidence"><div><span>信頼度</span><strong>{active.confidence}%</strong></div><div className="confidence-track"><i style={{width:`${active.confidence}%`}}/></div><small>{active.sources.join('・')} / サンプル {active.sampleCount}件</small></div><div className="bars">{[0,2,4,6].map((offset) => <div key={offset}><i style={{height:`${crowdAt(active,Math.min(23,hour+offset))}%`}}/><small>{Math.min(23,hour+offset)}時</small></div>)}</div><a href="#offer" className="primary-cta">{brand.cta}<span>→</span></a><small className="ad-label">広告・提携先へ移動します</small></aside></div>
+    </section>
 
-      <section className="ugc-band">
-        <div>
-          <p className="eyebrow">UGC</p>
-          <h2>ユーザー投稿で情報を育てる</h2>
-          <p>
-            見つけた作品ページ、SNS投稿、メーカー情報を投稿できる仕組みにし、確認済み情報として
-            女優プロフィールへ反映します。
-          </p>
-        </div>
-        <form className="ugc-form" onSubmit={submitUgc}>
-          <input type="text" placeholder="作品名または品番" required />
-          <input type="url" placeholder="証拠URL" required />
-          <button type="submit">候補を投稿</button>
-          {submitted && <p className="form-note">投稿候補を受け付けました。確認後に反映します。</p>}
-        </form>
-      </section>
+    <OperationsPanel brand={brand} zones={brand.zones} onUpdated={()=>setCrowdEvents(readEvents())} initialMode={params.get('checkin')==='1'?'visitor':'facility'}/>
 
-      <section className="ranking-band">
-        <div>
-          <p className="eyebrow">Monetize</p>
-          <h2>収益導線</h2>
-        </div>
-        <ul className="revenue-list">
-          <li>配信サイト・販売ページへのアフィリエイトリンク</li>
-          <li>女優プロフィールの公式SNS・ファンクラブ導線</li>
-          <li>メーカー・レーベル向けの掲載強化枠</li>
-        </ul>
-      </section>
+    <section className="notification-section" id="notify"><div><p className="eyebrow">SMART ALERT</p><h2>空いた瞬間だけ、<br/>お知らせ。</h2><p>通知条件は端末に保存します。外部の混雑APIや個人の移動履歴は使用しません。</p>{noticeMessage&&<p role="status">{noticeMessage}</p>}</div><div className="notification-card"><label>通知する混雑度 <strong>{threshold}%以下</strong><input type="range" min="20" max="70" step="10" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}/></label><label className="check"><input type="checkbox" defaultChecked/>近くの空いている代替候補も通知</label><label className="check"><input type="checkbox"/>限定クーポンを受け取る</label><button onClick={enableNotice}>{notice ? '通知条件を更新' : 'この条件で通知を登録'}</button></div></section>
 
-      <section className="faq-band">
-        <div className="section-heading">
-          <p className="eyebrow">FAQ</p>
-          <h2>よくある検索</h2>
-        </div>
-        <div className="faq-list">
-          {faqItems.map((item) => (
-            <article key={item.question}>
-              <h3>{item.question}</h3>
-              <p>{item.answer}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
-  )
+    <section className="alternatives"><p className="eyebrow">AVAILABLE NOW</p><h2>いま空いている選択肢</h2><div className="spot-grid">{alternatives.map((spot,index) => <article key={spot.id} onClick={() => {setSelected(spot.id);document.querySelector('#live').scrollIntoView({behavior:'smooth'})}}><span>0{index+1}</span><b className={crowdLabel(spot.crowd)[1]}>{crowdLabel(spot.crowd)[0]}</b><h3>{spot.name}</h3><div><strong>{spot.crowd}%</strong><small>混雑度</small></div><button>詳しく見る →</button></article>)}</div></section>
+
+    <section className="brand-catalog" id="brands"><div className="section-heading"><div><p className="eyebrow">ONE PLATFORM, 30 BRANDS</p><h2>30ジャンルを共通基盤で展開</h2></div><p>各カードを選ぶと、このサイト全体がそのジャンル専用サービスへ切り替わります。</p></div><div className="catalog-grid">{verticals.map((item) => <button key={item.slug} onClick={() => {changeBrand(item.slug);window.scrollTo({top:0,behavior:'smooth'})}} style={{'--tile':item.primary}}><span>{String(item.rank).padStart(2,'0')}</span><div><b>{item.name}</b><small>{item.category}</small></div><i>→</i></button>)}</div></section>
+
+    <section className="business" id="offer"><div><p className="eyebrow">BUSINESS MODEL</p><h2>空いている時間を、<br/>売上に変える。</h2></div><div><p>施設向け月額、通知配信、予約成果報酬を組み合わせます。広告と自然順位を分離し、混雑情報の取得時刻と信頼度を明示します。</p><a href={`mailto:hello@${brand.domain}`}>掲載パートナーに相談 →</a></div></section>
+    <footer><a className="brand" href="#top"><span>●</span>{brand.name}</a><p>混雑情報は推定値を含みます。実際の状況と異なる場合があります。</p><p>© 2026 SUKIMA PLATFORM</p></footer>
+  </main>
 }
+
+function App(){return new URLSearchParams(window.location.search).get('tool')==='dqwalk'?<DqWalkPlanner/>:<ExistingPlatform/>}
 
 export default App
