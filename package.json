@@ -11,6 +11,7 @@
     "mobile": "npm --prefix apps/mobile start"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },

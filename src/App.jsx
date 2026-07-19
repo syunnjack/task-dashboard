@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { getVertical, verticals } from './data/verticals.js'
+import OperationsPanel from './components/OperationsPanel.jsx'
+import { readEvents, scoreCrowd } from './lib/crowdStore.js'
 
 const baseSpots = [
   { id:1, x:24, y:31, base:82, name:'中央エリア', wait:32 },
@@ -76,8 +78,15 @@ function App() {
   const [selected,setSelected] = useState(1)
   const [notice,setNotice] = useState(() => localStorage.getItem('sukima.notice') === 'on')
   const [threshold,setThreshold] = useState(40)
+  const [crowdEvents,setCrowdEvents] = useState(readEvents)
   const brand = getVertical(slug)
-  const points = useMemo(() => baseSpots.map((spot,index) => ({...spot,name:brand.zones[index % brand.zones.length],crowd:crowdAt(spot,hour)})),[brand,hour])
+  const points = useMemo(() => {
+    return baseSpots.map((spot,index) => {
+      const name=brand.zones[index % brand.zones.length]
+      const snapshot=scoreCrowd({brand:brand.slug,zone:name,baseline:crowdAt(spot,hour),events:crowdEvents})
+      return {...spot,name,crowd:snapshot.score,...snapshot}
+    })
+  },[brand,hour,crowdEvents])
   const active = points.find((item) => item.id === selected) ?? points[0]
   const alternatives = [...points].filter((item) => item.id !== selected).sort((a,b) => a.crowd-b.crowd).slice(0,3)
 
@@ -103,7 +112,7 @@ function App() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#top"><span>●</span>{brand.name}</a>
-      <nav><a href="#live">混雑状況</a><a href="#notify">空き通知</a><a href="#brands">30ブランド</a></nav>
+      <nav><a href="#live">混雑状況</a><a href="#operations">データ入力</a><a href="#notify">空き通知</a><a href="#brands">30ブランド</a></nav>
       <BrandSwitcher current={brand} onChange={changeBrand}/>
     </header>
 
@@ -114,8 +123,10 @@ function App() {
 
     <section className="live" id="live">
       <div className="live-toolbar"><div><p className="eyebrow">LIVE DENSITY</p><h2>{brand.name} 混雑ヒートマップ</h2></div><label>時刻 <strong>{hour}:00</strong><input type="range" min="7" max="23" value={hour} onChange={(e) => setHour(Number(e.target.value))}/></label></div>
-      <div className="live-layout"><HeatMap points={points} selected={selected} onSelect={setSelected}/><aside className="detail"><p>選択中</p><h3>{active.name}</h3><div className={`score ${crowdLabel(active.crowd)[1]}`}><strong>{active.crowd}%</strong><span>{crowdLabel(active.crowd)[0]}<small>待ち時間目安 {active.wait}分</small></span></div><div className="bars">{[0,2,4,6].map((offset) => <div key={offset}><i style={{height:`${crowdAt(active,Math.min(23,hour+offset))}%`}}/><small>{Math.min(23,hour+offset)}時</small></div>)}</div><a href="#offer" className="primary-cta">{brand.cta}<span>→</span></a><small className="ad-label">広告・提携先へ移動します</small></aside></div>
+      <div className="live-layout"><HeatMap points={points} selected={selected} onSelect={setSelected}/><aside className="detail"><p>選択中</p><h3>{active.name}</h3><div className={`score ${crowdLabel(active.crowd)[1]}`}><strong>{active.crowd}%</strong><span>{crowdLabel(active.crowd)[0]}<small>待ち時間目安 {active.wait}分</small></span></div><div className="confidence"><div><span>信頼度</span><strong>{active.confidence}%</strong></div><div className="confidence-track"><i style={{width:`${active.confidence}%`}}/></div><small>{active.sources.join('・')} / サンプル {active.sampleCount}件</small></div><div className="bars">{[0,2,4,6].map((offset) => <div key={offset}><i style={{height:`${crowdAt(active,Math.min(23,hour+offset))}%`}}/><small>{Math.min(23,hour+offset)}時</small></div>)}</div><a href="#offer" className="primary-cta">{brand.cta}<span>→</span></a><small className="ad-label">広告・提携先へ移動します</small></aside></div>
     </section>
+
+    <OperationsPanel brand={brand} zones={brand.zones} onUpdated={()=>setCrowdEvents(readEvents())} initialMode={params.get('checkin')==='1'?'visitor':'facility'}/>
 
     <section className="notification-section" id="notify"><div><p className="eyebrow">SMART ALERT</p><h2>空いた瞬間だけ、<br/>お知らせ。</h2><p>通知条件は端末に保存します。外部の混雑APIや個人の移動履歴は使用しません。</p></div><div className="notification-card"><label>通知する混雑度 <strong>{threshold}%以下</strong><input type="range" min="20" max="70" step="10" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}/></label><label className="check"><input type="checkbox" defaultChecked/>近くの空いている代替候補も通知</label><label className="check"><input type="checkbox"/>限定クーポンを受け取る</label><button onClick={enableNotice}>{notice ? '通知条件を更新' : 'この条件で通知を登録'}</button></div></section>
 
