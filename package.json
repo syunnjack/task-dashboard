@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/fetch-fanza-data.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
