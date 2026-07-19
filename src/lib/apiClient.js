@@ -14,3 +14,5 @@ export const fetchCrowd=(facilityId)=>request(`/v1/crowd?facilityId=${encodeURIC
 export const postEvent=(token,event)=>request('/v1/events',{token,method:'POST',body:event})
 export const postCheckin=(facilityId,zoneId)=>request('/v1/events/checkin',{method:'POST',body:{facilityId,zoneId}})
 export const evaluateNotifications=(token)=>request('/v1/notifications/evaluate',{token,method:'POST'})
+export const getPushPublicKey=()=>request('/v1/push/public-key')
+export const savePushSubscription=(input)=>request('/v1/subscriptions',{method:'POST',body:input})

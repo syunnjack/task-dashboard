@@ -38,3 +38,10 @@ test('notification jobs include retry columns',()=>{
   const columns=db.prepare('PRAGMA table_info(notification_jobs)').all().map((column)=>column.name)
   assert.equal(['attempts','last_error','next_attempt_at'].every((name)=>columns.includes(name)),true)
 })
+
+test('push subscriptions are scoped to an existing facility and zone',()=>{
+  const db=setup();const zone=db.prepare('SELECT id FROM zones WHERE facility_id=? LIMIT 1').get('demo-sauna')
+  const saved=subscribe(db,{facilityId:'demo-sauna',zoneId:zone.id,endpoint:'expo-token',subscription:{platform:'expo',token:'expo-token'},threshold:200})
+  assert.equal(saved.threshold,90)
+  assert.throws(()=>subscribe(db,{facilityId:'missing',endpoint:'bad',subscription:{}}),/facility_not_found/)
+})

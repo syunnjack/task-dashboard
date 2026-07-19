@@ -24,6 +24,7 @@ const server=createServer(async(request,response)=>{
   const url=new URL(request.url,'http://localhost')
   try{
     if(request.method==='GET'&&url.pathname==='/health')return send(response,200,{ok:true,service:'sukima-api'})
+    if(request.method==='GET'&&url.pathname==='/v1/push/public-key')return send(response,200,{publicKey:process.env.VAPID_PUBLIC_KEY||null})
     if(request.method==='POST'&&url.pathname==='/v1/session'){
       const rate=rateLimit(`login:${request.socket.remoteAddress}`,{limit:8,windowMs:15*60_000})
       if(!rate.allowed)return send(response,429,{error:'too_many_attempts',retryAfter:rate.retryAfter})
@@ -45,6 +46,11 @@ const server=createServer(async(request,response)=>{
       const input=await body(request);const event=addEvent(db,{facilityId:input.facilityId||'demo-sauna',zoneId:input.zoneId,type:'checkin',value:1,source:request.socket.remoteAddress})
       return send(response,201,{event,crowd:snapshot(db,input.facilityId||'demo-sauna')})
     }
+    if(request.method==='POST'&&url.pathname==='/v1/subscriptions'){
+      const rate=rateLimit(`subscription:${request.socket.remoteAddress}`,{limit:12,windowMs:60*60_000})
+      if(!rate.allowed)return send(response,429,{error:'subscription_rate_limited',retryAfter:rate.retryAfter})
+      const input=await body(request);return send(response,201,subscribe(db,input))
+    }
     const session=authenticate(db,request.headers.authorization)
     if(!session)return send(response,401,{error:'authentication_required'})
     const {facilityId,role}=session
@@ -52,10 +58,6 @@ const server=createServer(async(request,response)=>{
       if(role==='viewer')return send(response,403,{error:'editor_role_required'})
       const input=await body(request);const event=addEvent(db,{facilityId,zoneId:input.zoneId,type:input.type,value:Number(input.value),source:'facility'})
       return send(response,201,{event,crowd:snapshot(db,facilityId)})
-    }
-    if(request.method==='POST'&&url.pathname==='/v1/subscriptions'){
-      if(role==='viewer')return send(response,403,{error:'editor_role_required'})
-      const input=await body(request);return send(response,201,subscribe(db,{facilityId,...input}))
     }
     if(request.method==='POST'&&url.pathname==='/v1/invites'){
       if(role!=='owner')return send(response,403,{error:'owner_role_required'})

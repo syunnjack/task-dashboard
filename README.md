@@ -37,6 +37,8 @@ npm --prefix services/api run worker
 
 Web Push と Expo Push に対応し、失敗時は最大4回まで指数バックオフで再試行します。施設アカウントには owner / editor / viewer 権限があり、匿名チェックインとログインにはレート制限があります。
 
+Webでは`VITE_SUKIMA_API_URL`、モバイルでは`EXPO_PUBLIC_SUKIMA_API_URL`と`EXPO_PUBLIC_EAS_PROJECT_ID`を設定すると、端末のPush購読情報が共有APIへ登録されます。
+
 Webを共有APIへ接続する場合は、Web側の`VITE_SUKIMA_API_URL`を設定します。未設定時は端末内デモモードで動作します。
 
 ## Documentation

@@ -83,9 +83,14 @@ export function snapshot(db,facilityId){
 }
 
 export function subscribe(db,{facilityId,zoneId,endpoint,subscription,threshold=40,offers=false}){
+  const facility=db.prepare('SELECT id FROM facilities WHERE id=?').get(facilityId)
+  if(!facility)throw new Error('facility_not_found')
+  if(zoneId&&!db.prepare('SELECT id FROM zones WHERE id=? AND facility_id=?').get(zoneId,facilityId))throw new Error('zone_not_found')
+  if(!endpoint||!subscription||typeof subscription!=='object')throw new Error('invalid_subscription')
+  const safeThreshold=Math.min(90,Math.max(10,Number(threshold)||40))
   const id=randomUUID();const createdAt=new Date().toISOString()
-  db.prepare(`INSERT INTO notification_subscriptions(id,facility_id,zone_id,endpoint,subscription_json,threshold,offers,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET zone_id=excluded.zone_id,subscription_json=excluded.subscription_json,threshold=excluded.threshold,offers=excluded.offers`).run(id,facilityId,zoneId||null,endpoint,JSON.stringify(subscription),threshold,offers?1:0,createdAt)
-  return {id,threshold,offers,createdAt}
+  db.prepare(`INSERT INTO notification_subscriptions(id,facility_id,zone_id,endpoint,subscription_json,threshold,offers,created_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET facility_id=excluded.facility_id,zone_id=excluded.zone_id,subscription_json=excluded.subscription_json,threshold=excluded.threshold,offers=excluded.offers`).run(id,facilityId,zoneId||null,endpoint,JSON.stringify(subscription),safeThreshold,offers?1:0,createdAt)
+  return {id,threshold:safeThreshold,offers:Boolean(offers),createdAt}
 }
 
 export function evaluateNotifications(db,facilityId){
@@ -98,7 +103,7 @@ export function evaluateNotifications(db,facilityId){
     if(!match)continue
     const recently=subscription.last_notified_at&&Date.now()-new Date(subscription.last_notified_at).getTime()<12*60*60*1000
     if(recently)continue
-    const payload={title:`${match.name}が空きました`,body:`現在の混雑度は${match.score}%です。`,url:`/?facility=${facilityId}&zone=${match.id}`}
+    const payload={title:`${match.name}が空きました`,body:`現在の混雑度は${match.score}%です。`,url:`?facility=${facilityId}&zone=${match.id}`}
     const job={id:randomUUID(),subscriptionId:subscription.id,score:match.score,payload,status:'pending',createdAt:new Date().toISOString()}
     db.prepare('INSERT INTO notification_jobs(id,subscription_id,score,payload_json,status,created_at) VALUES(?,?,?,?,?,?)').run(job.id,job.subscriptionId,job.score,JSON.stringify(job.payload),job.status,job.createdAt)
     db.prepare('UPDATE notification_subscriptions SET last_notified_at=? WHERE id=?').run(job.createdAt,subscription.id)

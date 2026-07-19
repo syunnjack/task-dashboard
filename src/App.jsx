@@ -3,6 +3,8 @@ import './App.css'
 import { getVertical, verticals } from './data/verticals.js'
 import OperationsPanel from './components/OperationsPanel.jsx'
 import { readEvents, scoreCrowd } from './lib/crowdStore.js'
+import { apiConfigured } from './lib/apiClient.js'
+import { registerWebPush } from './lib/pushClient.js'
 
 const baseSpots = [
   { id:1, x:24, y:31, base:82, name:'中央エリア', wait:32 },
@@ -77,6 +79,7 @@ function App() {
   const [hour,setHour] = useState(Math.min(23,Math.max(7,new Date().getHours())))
   const [selected,setSelected] = useState(1)
   const [notice,setNotice] = useState(() => localStorage.getItem('sukima.notice') === 'on')
+  const [noticeMessage,setNoticeMessage] = useState('')
   const [threshold,setThreshold] = useState(40)
   const [crowdEvents,setCrowdEvents] = useState(readEvents)
   const brand = getVertical(slug)
@@ -101,12 +104,20 @@ function App() {
 
   const changeBrand = (next) => { setSlug(next); setSelected(1) }
   const enableNotice = async () => {
-    if (!('Notification' in window)) return
-    const permission = await Notification.requestPermission()
-    const enabled = permission === 'granted'
-    setNotice(enabled)
-    localStorage.setItem('sukima.notice',enabled ? 'on' : 'off')
-    if (enabled) new Notification(`${brand.name}の通知を登録しました`,{body:`混雑度が${threshold}%以下になったらお知らせします。`})
+    try {
+      if(apiConfigured)await registerWebPush({facilityId:'demo-sauna',threshold})
+      else {
+        if (!('Notification' in window)) throw new Error('push_not_supported')
+        const permission = await Notification.requestPermission()
+        if(permission!=='granted')throw new Error('permission_denied')
+        new Notification(`${brand.name}の通知を登録しました`,{body:`混雑度が${threshold}%以下になったらお知らせします。`})
+      }
+      setNotice(true);setNoticeMessage(apiConfigured?'この端末へ空き通知を配信します。':'デモ通知を登録しました。')
+      localStorage.setItem('sukima.notice','on')
+    } catch(error) {
+      setNotice(false);localStorage.setItem('sukima.notice','off')
+      setNoticeMessage(error.message==='push_not_configured'?'通知サーバーの公開鍵が未設定です。':error.message==='permission_denied'?'ブラウザで通知を許可してください。':'この環境では通知を登録できません。')
+    }
   }
 
   return <main>
@@ -128,7 +139,7 @@ function App() {
 
     <OperationsPanel brand={brand} zones={brand.zones} onUpdated={()=>setCrowdEvents(readEvents())} initialMode={params.get('checkin')==='1'?'visitor':'facility'}/>
 
-    <section className="notification-section" id="notify"><div><p className="eyebrow">SMART ALERT</p><h2>空いた瞬間だけ、<br/>お知らせ。</h2><p>通知条件は端末に保存します。外部の混雑APIや個人の移動履歴は使用しません。</p></div><div className="notification-card"><label>通知する混雑度 <strong>{threshold}%以下</strong><input type="range" min="20" max="70" step="10" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}/></label><label className="check"><input type="checkbox" defaultChecked/>近くの空いている代替候補も通知</label><label className="check"><input type="checkbox"/>限定クーポンを受け取る</label><button onClick={enableNotice}>{notice ? '通知条件を更新' : 'この条件で通知を登録'}</button></div></section>
+    <section className="notification-section" id="notify"><div><p className="eyebrow">SMART ALERT</p><h2>空いた瞬間だけ、<br/>お知らせ。</h2><p>通知条件は端末に保存します。外部の混雑APIや個人の移動履歴は使用しません。</p>{noticeMessage&&<p role="status">{noticeMessage}</p>}</div><div className="notification-card"><label>通知する混雑度 <strong>{threshold}%以下</strong><input type="range" min="20" max="70" step="10" value={threshold} onChange={(e) => setThreshold(Number(e.target.value))}/></label><label className="check"><input type="checkbox" defaultChecked/>近くの空いている代替候補も通知</label><label className="check"><input type="checkbox"/>限定クーポンを受け取る</label><button onClick={enableNotice}>{notice ? '通知条件を更新' : 'この条件で通知を登録'}</button></div></section>
 
     <section className="alternatives"><p className="eyebrow">AVAILABLE NOW</p><h2>いま空いている選択肢</h2><div className="spot-grid">{alternatives.map((spot,index) => <article key={spot.id} onClick={() => {setSelected(spot.id);document.querySelector('#live').scrollIntoView({behavior:'smooth'})}}><span>0{index+1}</span><b className={crowdLabel(spot.crowd)[1]}>{crowdLabel(spot.crowd)[0]}</b><h3>{spot.name}</h3><div><strong>{spot.crowd}%</strong><small>混雑度</small></div><button>詳しく見る →</button></article>)}</div></section>
 

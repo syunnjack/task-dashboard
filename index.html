@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#155e52" />
     <meta name="description" content="外部の混雑APIを使わず、施設入力・QR・整理券・センサーから混雑を可視化して空いた瞬間を知らせる30ブランド共通基盤。" />
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" />
     <title>SUKIMA PLATFORM｜混雑を避けて、いい時間を選ぶ</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js'))}</script>
+    <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('%BASE_URL%sw.js'))}</script>
   </body>
 </html>
