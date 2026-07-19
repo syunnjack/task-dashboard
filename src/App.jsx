@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { getVertical, verticals } from './data/verticals.js'
 import OperationsPanel from './components/OperationsPanel.jsx'
+import TravelConcierge from './components/TravelConcierge.jsx'
 import { readEvents, scoreCrowd } from './lib/crowdStore.js'
 import { apiConfigured } from './lib/apiClient.js'
 import { registerWebPush } from './lib/pushClient.js'
@@ -75,7 +76,7 @@ function BrandSwitcher({ current, onChange }) {
 
 function App() {
   const params = new URLSearchParams(window.location.search)
-  const [slug,setSlug] = useState(params.get('brand') || 'sauna')
+  const [slug,setSlug] = useState(params.get('brand') || 'tourism')
   const [hour,setHour] = useState(Math.min(23,Math.max(7,new Date().getHours())))
   const [selected,setSelected] = useState(1)
   const [notice,setNotice] = useState(() => localStorage.getItem('sukima.notice') === 'on')
@@ -123,7 +124,7 @@ function App() {
   return <main>
     <header className="topbar">
       <a className="brand" href="#top"><span>●</span>{brand.name}</a>
-      <nav><a href="#live">混雑状況</a><a href="#operations">データ入力</a><a href="#notify">空き通知</a><a href="#brands">30ブランド</a></nav>
+      <nav><a href="#concierge">旅支度AI</a><a href="#live">混雑状況</a><a href="#operations">データ入力</a><a href="#notify">空き通知</a></nav>
       <BrandSwitcher current={brand} onChange={changeBrand}/>
     </header>
 
@@ -131,6 +132,8 @@ function App() {
       <div><p className="eyebrow">NO EXTERNAL CROWD API · OWN DATA PLATFORM</p><h1>混雑を避けて、<br/><em>いい時間</em>を選ぼう。</h1><p className="lead">{brand.category}の混雑を、施設入力・QRチェックイン・整理券・センサーから可視化。空いた瞬間を通知し、そのまま予約・購入できます。</p><div className="hero-actions"><a href="#live">現在の混雑を見る</a><button onClick={enableNotice}>{notice ? '通知登録済み' : '空いたら通知'}</button></div></div>
       <aside className="brand-card"><p>おすすめ順位</p><strong>#{String(brand.rank).padStart(2,'0')}</strong><h2>{brand.category}</h2><dl><div><dt>ドメイン候補</dt><dd>{brand.domain}</dd></div><div><dt>収益導線</dt><dd>{brand.revenue}</dd></div></dl></aside>
     </section>
+
+    <TravelConcierge />
 
     <section className="live" id="live">
       <div className="live-toolbar"><div><p className="eyebrow">LIVE DENSITY</p><h2>{brand.name} 混雑ヒートマップ</h2></div><label>時刻 <strong>{hour}:00</strong><input type="range" min="7" max="23" value={hour} onChange={(e) => setHour(Number(e.target.value))}/></label></div>
