@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import './App.css'
-import actressRecords from './data/actresses.json'
 
 const featuredCreators = [
   {
@@ -86,13 +85,32 @@ const faqItems = [
   },
 ]
 
+const MAX_RESULTS = 60
+
 function App() {
   const [query, setQuery] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [actressRecords, setActressRecords] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/data/actresses.json')
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled) setActressRecords(data)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const results = useMemo(() => {
     const keyword = query.trim().toLowerCase()
-    if (!keyword) return actressRecords
+    if (!keyword) return actressRecords.slice(0, MAX_RESULTS)
     return actressRecords.filter((record) => {
       const haystack = [
         record.name,
@@ -104,8 +122,8 @@ function App() {
         ...record.tags,
       ].join(' ').toLowerCase()
       return haystack.includes(keyword)
-    })
-  }, [query])
+    }).slice(0, MAX_RESULTS)
+  }, [query, actressRecords])
 
   const submitUgc = (event) => {
     event.preventDefault()
@@ -163,7 +181,9 @@ function App() {
             <article key={record.code}>
               <div>
                 <p className="result-code">{record.code}</p>
-                <h3>{record.name}</h3>
+                <h3>
+                  {record.slug ? <a href={`/actress/${record.slug}/`}>{record.name}</a> : record.name}
+                </h3>
                 {record.aliases?.length > 0 && (
                   <p className="result-aliases">旧名・別名: {record.aliases.join(' / ')}</p>
                 )}
@@ -185,7 +205,8 @@ function App() {
               </div>
             </article>
           ))}
-          {results.length === 0 && (
+          {loading && <p className="no-results">読み込み中です…</p>}
+          {!loading && results.length === 0 && (
             <p className="no-results">該当候補がありません。UGC投稿から情報提供できます。</p>
           )}
         </div>
