@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 
-const DATA_PATH = new URL('../src/data/actresses.json', import.meta.url)
+const DATA_PATH = new URL('../public/data/actresses.json', import.meta.url)
 const FANZA_ACTRESS_URL = 'https://api.dmm.com/affiliate/v3/ActressSearch'
 const FANZA_ITEM_URL = 'https://api.dmm.com/affiliate/v3/ItemList'
 
@@ -67,6 +67,10 @@ function normalizeFanzaActress(actress) {
     work: 'セクシー女優',
     code: `FANZA-ACTRESS-${actress.id || actress.name}`,
     maker: 'FANZA ActressSearch',
+    ruby: actress.ruby || '',
+    dmmId: actress.id || '',
+    prefecture: actress.prefectures || '',
+    birthday: actress.birthday || '',
     tags: [
       actress.name,
       actress.ruby,

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "node scripts/fetch-fanza-data.mjs",
+    "prebuild": "node scripts/fetch-fanza-data.mjs && node scripts/generate-actress-pages.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
